@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::Write;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
 }
 
 pub struct Image {
@@ -16,10 +16,15 @@ pub struct Image {
 
 impl Image {
     pub fn new(width: u32, height: u32) -> Image {
+        let black = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        };
         Image {
             width,
             height,
-            data: vec![Color { r: 0, g: 0, b: 0 }; (width * height) as usize],
+            data: vec![black; (width * height) as usize],
         }
     }
 
@@ -30,12 +35,14 @@ impl Image {
     }
 
     fn to_ppm(&self) -> Vec<u8> {
+        let float_to_byte = |f: f32| ((f.max(0.0).min(1.0) * 255.0).round()) as u8;
         let header = format!("P6 {} {} 255 ", self.width, self.height);
         let data_bytes: Vec<u8> = self
             .data
             .iter()
             .map(|c| [c.r, c.g, c.b])
             .flatten()
+            .map(float_to_byte)
             .collect();
         header
             .as_bytes()
@@ -92,17 +99,18 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_apply_shader() {
         let shader = ClosureShaderWrapper(|x, y| Color {
-            r: x as u8,
-            g: y as u8,
-            b: 0,
+            r: x as f32,
+            g: y as f32,
+            b: 0.0,
         });
         let mut image = Image::new(2, 2);
         shader.apply(&mut image);
-        assert_eq!(image.data[0], Color { r: 0, g: 0, b: 0 });
-        assert_eq!(image.data[1], Color { r: 1, g: 0, b: 0 });
-        assert_eq!(image.data[2], Color { r: 0, g: 1, b: 0 });
-        assert_eq!(image.data[3], Color { r: 1, g: 1, b: 0 });
+        assert_eq!(image.data[0], Color { r: 0.0, g: 0.0, b: 0.0 });
+        assert_eq!(image.data[1], Color { r: 1.0, g: 0.0, b: 0.0 });
+        assert_eq!(image.data[2], Color { r: 0.0, g: 1.0, b: 0.0 });
+        assert_eq!(image.data[3], Color { r: 1.0, g: 1.0, b: 0.0 });
     }
 }
