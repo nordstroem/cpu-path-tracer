@@ -2,7 +2,7 @@ use std::ops::Mul;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Matrix4f {
-    pub data: [f32; 16],
+    pub data: [[f32; 4]; 4],
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -10,15 +10,6 @@ pub struct Vector3f {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Camera {
-    pub position: Vector3f,
-    pub forward: Vector3f,
-    pub up: Vector3f,
-    pub right: Vector3f,
-    pub fov: f32,
 }
 
 impl Vector3f {
@@ -48,22 +39,25 @@ impl Vector3f {
 }
 
 impl Matrix4f {
-    pub fn new(data: [f32; 16]) -> Matrix4f {
+    pub fn new(data: [[f32; 4]; 4]) -> Matrix4f {
         Matrix4f { data }
     }
     pub fn zeros() -> Matrix4f {
-        Matrix4f::new([0.0; 16])
+        Matrix4f::new([[0.0; 4]; 4])
     }
     pub fn identity() -> Matrix4f {
         Matrix4f::new([
-            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
         ])
     }
     pub fn transpose(&self) -> Matrix4f {
         let mut result = Matrix4f::zeros();
         for i in 0..4 {
             for j in 0..4 {
-                result.data[i + j * 4] = self.data[j + i * 4];
+                result.data[i][j] = self.data[j][i];
             }
         }
         result
@@ -78,7 +72,7 @@ impl Mul<&Matrix4f> for &Matrix4f {
         for i in 0..4 {
             for j in 0..4 {
                 for k in 0..4 {
-                    result.data[i + j * 4] += self.data[k + j * 4] * rhs.data[i + k * 4];
+                    result.data[i][j] += self.data[i][k] * rhs.data[k][j];
                 }
             }
         }
@@ -90,10 +84,8 @@ impl Mul<f32> for &Matrix4f {
     type Output = Matrix4f;
 
     fn mul(self, rhs: f32) -> Matrix4f {
-        let mut result = Matrix4f::zeros();
-        for i in 0..16 {
-            result.data[i] = self.data[i] * rhs;
-        }
+        let mut result = *self;
+        result.data.iter_mut().flatten().for_each(|x| *x *= rhs);
         result
     }
 }
@@ -103,12 +95,23 @@ impl Mul<&Vector3f> for &Matrix4f {
 
     fn mul(self, rhs: &Vector3f) -> Vector3f {
         let result = Vector3f::new(
-            self.data[0] * rhs.x + self.data[1] * rhs.y + self.data[2] * rhs.z + self.data[3],
-            self.data[4] * rhs.x + self.data[5] * rhs.y + self.data[6] * rhs.z + self.data[7],
-            self.data[8] * rhs.x + self.data[9] * rhs.y + self.data[10] * rhs.z + self.data[11],
+            self.data[0][0] * rhs.x
+                + self.data[0][1] * rhs.y
+                + self.data[0][2] * rhs.z
+                + self.data[0][3],
+            self.data[1][0] * rhs.x
+                + self.data[1][1] * rhs.y
+                + self.data[1][2] * rhs.z
+                + self.data[1][3],
+            self.data[2][0] * rhs.x
+                + self.data[2][1] * rhs.y
+                + self.data[2][2] * rhs.z
+                + self.data[2][3],
         );
-        let w =
-            self.data[12] * rhs.x + self.data[13] * rhs.y + self.data[14] * rhs.z + self.data[15];
+        let w = self.data[3][0] * rhs.x
+            + self.data[3][1] * rhs.y
+            + self.data[3][2] * rhs.z
+            + self.data[3][3];
         Vector3f {
             x: result.x / w,
             y: result.y / w,
@@ -124,11 +127,16 @@ mod test {
     #[test]
     fn test_multiply_by_scalar() {
         let m = Matrix4f::new([
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.0, 14.0, 15.0, 16.0],
         ]);
         let expected = Matrix4f::new([
-            2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0,
-            32.0,
+            [2.0, 4.0, 6.0, 8.0],
+            [10.0, 12.0, 14.0, 16.0],
+            [18.0, 20.0, 22.0, 24.0],
+            [26.0, 28.0, 30.0, 32.0],
         ]);
         assert_eq!(m.mul(2.0), expected);
     }
@@ -143,10 +151,16 @@ mod test {
     #[test]
     fn test_transpose() {
         let m = Matrix4f::new([
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.0, 14.0, 15.0, 16.0],
         ]);
         let expected = Matrix4f::new([
-            1.0, 5.0, 9.0, 13.0, 2.0, 6.0, 10.0, 14.0, 3.0, 7.0, 11.0, 15.0, 4.0, 8.0, 12.0, 16.0,
+            [1.0, 5.0, 9.0, 13.0],
+            [2.0, 6.0, 10.0, 14.0],
+            [3.0, 7.0, 11.0, 15.0],
+            [4.0, 8.0, 12.0, 16.0],
         ]);
         assert_eq!(m.transpose(), expected);
     }
@@ -154,15 +168,22 @@ mod test {
     #[test]
     fn test_multiply_two_matrices() {
         let a = Matrix4f::new([
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.0, 14.0, 15.0, 16.0],
         ]);
         let b = Matrix4f::new([
-            17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0,
-            31.0, 32.0,
+            [17.0, 18.0, 19.0, 20.0],
+            [21.0, 22.0, 23.0, 24.0],
+            [25.0, 26.0, 27.0, 28.0],
+            [29.0, 30.0, 31.0, 32.0],
         ]);
         let expected = Matrix4f::new([
-            250.0, 260.0, 270.0, 280.0, 618.0, 644.0, 670.0, 696.0, 986.0, 1028.0, 1070.0, 1112.0,
-            1354.0, 1412.0, 1470.0, 1528.0,
+            [250.0, 260.0, 270.0, 280.0],
+            [618.0, 644.0, 670.0, 696.0],
+            [986.0, 1028.0, 1070.0, 1112.0],
+            [1354.0, 1412.0, 1470.0, 1528.0],
         ]);
         assert_eq!(a.mul(&b), expected);
     }
@@ -170,7 +191,10 @@ mod test {
     #[test]
     fn test_multiply_with_vector() {
         let m = Matrix4f::new([
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.0, 14.0, 15.0, 16.0],
         ]);
         let v = Vector3f::new(1.0, 2.0, 3.0);
         let w = 102.0;
