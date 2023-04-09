@@ -1,9 +1,11 @@
 use std::ops::Mul;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Matrix4f {
-    pub data: [[f32; 4]; 4],
+pub struct Matrixf<const R: usize, const C: usize> {
+    pub data: [[f32; C]; R],
 }
+
+pub type Matrix4f = Matrixf<4, 4>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vector3f {
@@ -38,23 +40,15 @@ impl Vector3f {
     }
 }
 
-impl Matrix4f {
-    pub fn new(data: [[f32; 4]; 4]) -> Matrix4f {
-        Matrix4f { data }
+impl<const R: usize, const C: usize> Matrixf<R, C> {
+    pub fn new(data: [[f32; C]; R]) -> Self {
+        Self { data }
     }
-    pub fn zeros() -> Matrix4f {
-        Matrix4f::new([[0.0; 4]; 4])
+    pub fn zeros() -> Self {
+        Self::new([[0.0; C]; R])
     }
-    pub fn identity() -> Matrix4f {
-        Matrix4f::new([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ])
-    }
-    pub fn transpose(&self) -> Matrix4f {
-        let mut result = Matrix4f::zeros();
+    pub fn transpose(&self) -> Self {
+        let mut result = Self::zeros();
         for i in 0..4 {
             for j in 0..4 {
                 result.data[i][j] = self.data[j][i];
@@ -64,14 +58,27 @@ impl Matrix4f {
     }
 }
 
-impl Mul<&Matrix4f> for &Matrix4f {
-    type Output = Matrix4f;
+impl<const S: usize> Matrixf<S, S> {
+    pub fn identity() -> Self {
+        let mut result = Self::zeros();
+        for i in 0..S {
+            result.data[i][i] = 1.0;
+        }
+        result
+    }
+}
 
-    fn mul(self, rhs: &Matrix4f) -> Matrix4f {
-        let mut result = Matrix4f::zeros();
-        for i in 0..4 {
-            for j in 0..4 {
-                for k in 0..4 {
+impl<const R1: usize, const C1: usize, const R2: usize, const C2: usize> Mul<&Matrixf<R2, C2>>
+    for &Matrixf<R1, C1>
+{
+    type Output = Matrixf<R1, C2>;
+
+    fn mul(self, rhs: &Matrixf<R2, C2>) -> Matrixf<R1, C2> {
+        assert!(C1 == R2);
+        let mut result = Matrixf::<R1, C2>::zeros();
+        for i in 0..R1 {
+            for j in 0..C2 {
+                for k in 0..C1 {
                     result.data[i][j] += self.data[i][k] * rhs.data[k][j];
                 }
             }
@@ -80,45 +87,45 @@ impl Mul<&Matrix4f> for &Matrix4f {
     }
 }
 
-impl Mul<f32> for &Matrix4f {
-    type Output = Matrix4f;
+impl<const R: usize, const C: usize> Mul<f32> for &Matrixf<R, C> {
+    type Output = Matrixf<R, C>;
 
-    fn mul(self, rhs: f32) -> Matrix4f {
+    fn mul(self, rhs: f32) -> Matrixf<R, C> {
         let mut result = *self;
         result.data.iter_mut().flatten().for_each(|x| *x *= rhs);
         result
     }
 }
 
-impl Mul<&Vector3f> for &Matrix4f {
-    type Output = Vector3f;
+// impl Mul<&Vector3f> for &Matrix4f {
+//     type Output = Vector3f;
 
-    fn mul(self, rhs: &Vector3f) -> Vector3f {
-        let result = Vector3f::new(
-            self.data[0][0] * rhs.x
-                + self.data[0][1] * rhs.y
-                + self.data[0][2] * rhs.z
-                + self.data[0][3],
-            self.data[1][0] * rhs.x
-                + self.data[1][1] * rhs.y
-                + self.data[1][2] * rhs.z
-                + self.data[1][3],
-            self.data[2][0] * rhs.x
-                + self.data[2][1] * rhs.y
-                + self.data[2][2] * rhs.z
-                + self.data[2][3],
-        );
-        let w = self.data[3][0] * rhs.x
-            + self.data[3][1] * rhs.y
-            + self.data[3][2] * rhs.z
-            + self.data[3][3];
-        Vector3f {
-            x: result.x / w,
-            y: result.y / w,
-            z: result.z / w,
-        }
-    }
-}
+//     fn mul(self, rhs: &Vector3f) -> Vector3f {
+//         let result = Vector3f::new(
+//             self.data[0][0] * rhs.x
+//                 + self.data[0][1] * rhs.y
+//                 + self.data[0][2] * rhs.z
+//                 + self.data[0][3],
+//             self.data[1][0] * rhs.x
+//                 + self.data[1][1] * rhs.y
+//                 + self.data[1][2] * rhs.z
+//                 + self.data[1][3],
+//             self.data[2][0] * rhs.x
+//                 + self.data[2][1] * rhs.y
+//                 + self.data[2][2] * rhs.z
+//                 + self.data[2][3],
+//         );
+//         let w = self.data[3][0] * rhs.x
+//             + self.data[3][1] * rhs.y
+//             + self.data[3][2] * rhs.z
+//             + self.data[3][3];
+//         Vector3f {
+//             x: result.x / w,
+//             y: result.y / w,
+//             z: result.z / w,
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod test {
@@ -188,17 +195,17 @@ mod test {
         assert_eq!(a.mul(&b), expected);
     }
 
-    #[test]
-    fn test_multiply_with_vector() {
-        let m = Matrix4f::new([
-            [1.0, 2.0, 3.0, 4.0],
-            [5.0, 6.0, 7.0, 8.0],
-            [9.0, 10.0, 11.0, 12.0],
-            [13.0, 14.0, 15.0, 16.0],
-        ]);
-        let v = Vector3f::new(1.0, 2.0, 3.0);
-        let w = 102.0;
-        let expected = Vector3f::new(18.0 / w, 46.0 / w, 74.0 / w);
-        assert_eq!(m.mul(&v), expected);
-    }
+    // #[test]
+    // fn test_multiply_with_vector() {
+    //     let m = Matrix4f::new([
+    //         [1.0, 2.0, 3.0, 4.0],
+    //         [5.0, 6.0, 7.0, 8.0],
+    //         [9.0, 10.0, 11.0, 12.0],
+    //         [13.0, 14.0, 15.0, 16.0],
+    //     ]);
+    //     let v = Vector3f::new(1.0, 2.0, 3.0);
+    //     let w = 102.0;
+    //     let expected = Vector3f::new(18.0 / w, 46.0 / w, 74.0 / w);
+    //     assert_eq!(m.mul(&v), expected);
+    // }
 }
