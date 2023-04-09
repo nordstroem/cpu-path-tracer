@@ -1,5 +1,5 @@
-mod geometry;
 mod image;
+mod matrix;
 mod pathtracer;
 use image::{Color, Image, Shader};
 
