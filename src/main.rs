@@ -1,5 +1,6 @@
+mod geometry;
 mod image;
-mod matrix;
+mod pathtracer;
 use image::{Color, Image, Shader};
 
 struct RainbowShader;
@@ -18,4 +19,5 @@ fn main() {
     let mut img = Image::new(256, 256);
     shader.apply(&mut img);
     img.save("test.ppm");
+    println!("{}", 1);
 }
