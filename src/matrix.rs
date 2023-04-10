@@ -1,4 +1,4 @@
-use std::ops::{Div, Mul};
+use std::ops::{Add, Div, Mul};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Matrixf<const R: usize, const C: usize> {
@@ -43,7 +43,7 @@ impl Vector4f {
     pub fn hnormalized(&self) -> Vector3f {
         let mut result = Matrixf::zeros();
         for i in 0..3 {
-            result.data[i][0] = self.at(i, 0) / self.at(3, 0);
+            result.data[i][0] = self.data[i][0] / self.data[3][0]
         }
         result
     }
@@ -53,15 +53,15 @@ impl<const R: usize> Matrixf<R, 1> {
     pub fn dot(&self, rhs: &Matrixf<R, 1>) -> f32 {
         let mut result = 0.0;
         for i in 0..R {
-            result += self.at(i, 0) * rhs.data[i][0];
+            result += self.data[i][0] * rhs.data[i][0];
         }
         result
     }
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
     }
-    pub fn normalized(&self) -> Matrixf<R, 1> {
-        self / self.length()
+    pub fn normalized(&self) -> Self {
+        *self / self.length()
     }
 }
 
@@ -107,7 +107,7 @@ impl<const R1: usize, const C1: usize, const C2: usize> Mul<&Matrixf<C1, C2>> fo
         for i in 0..R1 {
             for j in 0..C2 {
                 for k in 0..C1 {
-                    result.data[i][j] += self.at(i, k) * rhs.data[k][j];
+                    result.data[i][j] += self.data[i][k] * rhs.data[k][j];
                 }
             }
         }
@@ -115,23 +115,55 @@ impl<const R1: usize, const C1: usize, const C2: usize> Mul<&Matrixf<C1, C2>> fo
     }
 }
 
-impl<const R: usize, const C: usize> Mul<f32> for &Matrixf<R, C> {
+impl<const R: usize, const C: usize> Add<&Matrixf<R, C>> for Matrixf<R, C> {
     type Output = Matrixf<R, C>;
 
-    fn mul(self, rhs: f32) -> Matrixf<R, C> {
-        let mut result = *self;
-        result.data.iter_mut().flatten().for_each(|x| *x *= rhs);
-        result
+    fn add(mut self, rhs: &Matrixf<R, C>) -> Matrixf<R, C> {
+        self.data
+            .iter_mut()
+            .flatten()
+            .zip(rhs.data.iter().flatten())
+            .for_each(|(lhs, rhs)| *lhs += rhs);
+        self
     }
 }
 
-impl<const R: usize, const C: usize> Div<f32> for &Matrixf<R, C> {
+impl<const R: usize, const C: usize> Add<Matrixf<R, C>> for Matrixf<R, C> {
     type Output = Matrixf<R, C>;
 
-    fn div(self, rhs: f32) -> Matrixf<R, C> {
-        let mut result = *self;
-        result.data.iter_mut().flatten().for_each(|x| *x /= rhs);
-        result
+    fn add(mut self, rhs: Matrixf<R, C>) -> Matrixf<R, C> {
+        self.data
+            .iter_mut()
+            .flatten()
+            .zip(rhs.data.iter().flatten())
+            .for_each(|(lhs, rhs)| *lhs += rhs);
+        self
+    }
+}
+
+impl<const R: usize, const C: usize> Add<f32> for Matrixf<R, C> {
+    type Output = Matrixf<R, C>;
+
+    fn add(mut self, rhs: f32) -> Matrixf<R, C> {
+        self.data.iter_mut().flatten().for_each(|x| *x += rhs);
+        self
+    }
+}
+impl<const R: usize, const C: usize> Mul<f32> for Matrixf<R, C> {
+    type Output = Matrixf<R, C>;
+
+    fn mul(mut self, rhs: f32) -> Matrixf<R, C> {
+        self.data.iter_mut().flatten().for_each(|x| *x *= rhs);
+        self
+    }
+}
+
+impl<const R: usize, const C: usize> Div<f32> for Matrixf<R, C> {
+    type Output = Matrixf<R, C>;
+
+    fn div(mut self, rhs: f32) -> Matrixf<R, C> {
+        self.data.iter_mut().flatten().for_each(|x| *x /= rhs);
+        self
     }
 }
 
@@ -153,14 +185,14 @@ mod test {
             [18.0, 20.0, 22.0, 24.0],
             [26.0, 28.0, 30.0, 32.0],
         ]);
-        assert_eq!(m.mul(2.0), expected);
+        assert_eq!(m * 2.0, expected);
     }
 
     #[test]
     fn test_multiply_two_identity_matrices() {
         let a = Matrix4f::identity();
         let b = Matrix4f::identity();
-        assert_eq!(a.mul(&b), Matrix4f::identity());
+        assert_eq!(&a * &b, Matrix4f::identity());
     }
 
     #[test]
@@ -200,7 +232,7 @@ mod test {
             [986.0, 1028.0, 1070.0, 1112.0],
             [1354.0, 1412.0, 1470.0, 1528.0],
         ]);
-        assert_eq!(a.mul(&b), expected);
+        assert_eq!(&a * &b, expected);
     }
 
     #[test]
@@ -238,6 +270,29 @@ mod test {
         let v = Vector3f::xyz(1.0, 2.0, 3.0);
         let w = 102.0;
         let expected = Vector3f::xyz(18.0 / w, 46.0 / w, 74.0 / w);
-        assert_eq!(m.mul(&v.homogeneous()).hnormalized(), expected);
+        assert_eq!((&m * &v.homogeneous()).hnormalized(), expected);
+    }
+
+    #[test]
+    fn test_add_matrices() {
+        let a = Matrix4f::new([
+            [1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0],
+            [9.0, 10.0, 11.0, 12.0],
+            [13.0, 14.0, 15.0, 16.0],
+        ]);
+        let b = Matrix4f::new([
+            [17.0, 18.0, 19.0, 20.0],
+            [21.0, 22.0, 23.0, 24.0],
+            [25.0, 26.0, 27.0, 28.0],
+            [29.0, 30.0, 31.0, 32.0],
+        ]);
+        let expected = Matrix4f::new([
+            [18.0, 20.0, 22.0, 24.0],
+            [26.0, 28.0, 30.0, 32.0],
+            [34.0, 36.0, 38.0, 40.0],
+            [42.0, 44.0, 46.0, 48.0],
+        ]);
+        assert_eq!(a + b, expected);
     }
 }
