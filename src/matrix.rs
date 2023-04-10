@@ -33,37 +33,52 @@ pub struct Matrix<T: Numeric, const R: usize, const C: usize> {
     pub data: [[T; C]; R],
 }
 
-pub type Vector3f = Matrix<f32, 3, 1>;
-pub type Vector4f = Matrix<f32, 4, 1>;
+pub type Vector<T, const R: usize> = Matrix<T, R, 1>;
+pub type Vector2i = Vector<i32, 2>;
+pub type Vector2f = Vector<f32, 2>;
+pub type Vector3f = Vector<f32, 3>;
+pub type Vector4f = Vector<f32, 4>;
 pub type Matrix4f = Matrix<f32, 4, 4>;
 
-impl Vector3f {
-    pub fn xyz(x: f32, y: f32, z: f32) -> Vector3f {
-        Vector3f::new([[x], [y], [z]])
+impl<T: Numeric> Vector<T, 3> {
+    pub fn xyz(x: T, y: T, z: T) -> Self {
+        Self::new([[x], [y], [z]])
     }
-    pub fn cross(&self, rhs: &Vector3f) -> Vector3f {
-        Vector3f::xyz(
+    pub fn cross(&self, rhs: &Self) -> Self {
+        Self::xyz(
             self.y() * rhs.z() - self.z() * rhs.y(),
             self.z() * rhs.x() - self.x() * rhs.z(),
             self.x() * rhs.y() - self.y() * rhs.x(),
         )
     }
-    pub fn x(&self) -> f32 {
+    pub fn x(&self) -> T {
         self.data[0][0]
     }
-    pub fn y(&self) -> f32 {
+    pub fn y(&self) -> T {
         self.data[1][0]
     }
-    pub fn z(&self) -> f32 {
+    pub fn z(&self) -> T {
         self.data[2][0]
     }
-    pub fn homogeneous(&self) -> Vector4f {
-        let mut result = Matrix::zeros();
+    pub fn homogeneous(&self) -> Vector<T, 4> {
+        let mut result = Vector::zeros();
         for i in 0..3 {
             result.data[i][0] = result.data[i][0];
         }
-        result.data[3][0] = 1.0;
+        result.data[3][0] = T::from(1);
         result
+    }
+}
+
+impl<T: Numeric> Vector<T, 2> {
+    pub fn xy(x: T, y: T) -> Self {
+        Self::new([[x], [y]])
+    }
+    pub fn x(&self) -> T {
+        self.data[0][0]
+    }
+    pub fn y(&self) -> T {
+        self.data[1][0]
     }
 }
 
@@ -117,6 +132,16 @@ impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
     }
     pub fn at_mut(&mut self, row: usize, col: usize) -> &mut T {
         &mut self.data[row][col]
+    }
+
+    pub fn cast<U: Numeric + From<T>>(&self) -> Matrix<U, R, C> {
+        let mut result = Matrix::<U, R, C>::zeros();
+        for i in 0..R {
+            for j in 0..C {
+                result.data[i][j] = U::from(self.data[i][j]);
+            }
+        }
+        result
     }
 }
 
