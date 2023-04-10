@@ -1,13 +1,41 @@
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Matrixf<const R: usize, const C: usize> {
-    pub data: [[f32; C]; R],
+pub trait Numeric:
+    From<u8>
+    + Copy
+    + Add<Output = Self>
+    + AddAssign
+    + Mul<Output = Self>
+    + MulAssign
+    + DivAssign
+    + Div<Output = Self>
+    + Sub<Output = Self>
+    + SubAssign
+{
+}
+impl<
+        T: From<u8>
+            + Copy
+            + Add<Output = T>
+            + Mul<Output = T>
+            + Div<Output = T>
+            + Sub<Output = T>
+            + AddAssign
+            + MulAssign
+            + DivAssign
+            + SubAssign,
+    > Numeric for T
+{
 }
 
-pub type Matrix4f = Matrixf<4, 4>;
-pub type Vector3f = Matrixf<3, 1>;
-pub type Vector4f = Matrixf<4, 1>;
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Matrix<T: Numeric, const R: usize, const C: usize> {
+    pub data: [[T; C]; R],
+}
+
+pub type Vector3f = Matrix<f32, 3, 1>;
+pub type Vector4f = Matrix<f32, 4, 1>;
+pub type Matrix4f = Matrix<f32, 4, 4>;
 
 impl Vector3f {
     pub fn xyz(x: f32, y: f32, z: f32) -> Vector3f {
@@ -30,9 +58,9 @@ impl Vector3f {
         self.data[2][0]
     }
     pub fn homogeneous(&self) -> Vector4f {
-        let mut result = Matrixf::zeros();
+        let mut result = Matrix::zeros();
         for i in 0..3 {
-            *result.at_mut(i, 0) = *self.at(i, 0);
+            result.data[i][0] = result.data[i][0];
         }
         result.data[3][0] = 1.0;
         result
@@ -41,7 +69,7 @@ impl Vector3f {
 
 impl Vector4f {
     pub fn hnormalized(&self) -> Vector3f {
-        let mut result = Matrixf::zeros();
+        let mut result = Matrix::zeros();
         for i in 0..3 {
             result.data[i][0] = self.data[i][0] / self.data[3][0]
         }
@@ -49,14 +77,17 @@ impl Vector4f {
     }
 }
 
-impl<const R: usize> Matrixf<R, 1> {
-    pub fn dot(&self, rhs: &Matrixf<R, 1>) -> f32 {
-        let mut result = 0.0;
+impl<T: Numeric, const R: usize> Matrix<T, R, 1> {
+    pub fn dot(&self, rhs: &Matrix<T, R, 1>) -> T {
+        let mut result = T::from(0);
         for i in 0..R {
             result += self.data[i][0] * rhs.data[i][0];
         }
         result
     }
+}
+
+impl<const R: usize> Matrix<f32, R, 1> {
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
     }
@@ -65,15 +96,15 @@ impl<const R: usize> Matrixf<R, 1> {
     }
 }
 
-impl<const R: usize, const C: usize> Matrixf<R, C> {
-    pub fn new(data: [[f32; C]; R]) -> Self {
+impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
+    pub fn new(data: [[T; C]; R]) -> Self {
         Self { data }
     }
     pub fn zeros() -> Self {
-        Self::new([[0.0; C]; R])
+        Self::new([[T::from(0); C]; R])
     }
-    pub fn transpose(&self) -> Matrixf<C, R> {
-        let mut result = Matrixf::<C, R>::zeros();
+    pub fn transpose(&self) -> Matrix<T, C, R> {
+        let mut result = Matrix::<T, C, R>::zeros();
         for i in 0..R {
             for j in 0..C {
                 result.data[i][j] = self.data[j][i];
@@ -81,29 +112,31 @@ impl<const R: usize, const C: usize> Matrixf<R, C> {
         }
         result
     }
-    pub fn at(&self, row: usize, col: usize) -> &f32 {
+    pub fn at(&self, row: usize, col: usize) -> &T {
         &self.data[row][col]
     }
-    pub fn at_mut(&mut self, row: usize, col: usize) -> &mut f32 {
+    pub fn at_mut(&mut self, row: usize, col: usize) -> &mut T {
         &mut self.data[row][col]
     }
 }
 
-impl<const S: usize> Matrixf<S, S> {
+impl<T: Numeric, const S: usize> Matrix<T, S, S> {
     pub fn identity() -> Self {
         let mut result = Self::zeros();
         for i in 0..S {
-            result.data[i][i] = 1.0;
+            result.data[i][i] = T::from(1);
         }
         result
     }
 }
 
-impl<const R1: usize, const C1: usize, const C2: usize> Mul<&Matrixf<C1, C2>> for &Matrixf<R1, C1> {
-    type Output = Matrixf<R1, C2>;
+impl<T: Numeric, const R1: usize, const C1: usize, const C2: usize> Mul<&Matrix<T, C1, C2>>
+    for &Matrix<T, R1, C1>
+{
+    type Output = Matrix<T, R1, C2>;
 
-    fn mul(self, rhs: &Matrixf<C1, C2>) -> Matrixf<R1, C2> {
-        let mut result = Matrixf::<R1, C2>::zeros();
+    fn mul(self, rhs: &Matrix<T, C1, C2>) -> Matrix<T, R1, C2> {
+        let mut result = Matrix::<T, R1, C2>::zeros();
         for i in 0..R1 {
             for j in 0..C2 {
                 for k in 0..C1 {
@@ -115,53 +148,53 @@ impl<const R1: usize, const C1: usize, const C2: usize> Mul<&Matrixf<C1, C2>> fo
     }
 }
 
-impl<const R: usize, const C: usize> Add<&Matrixf<R, C>> for Matrixf<R, C> {
-    type Output = Matrixf<R, C>;
+impl<T: Numeric, const R: usize, const C: usize> Add<&Matrix<T, R, C>> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
 
-    fn add(mut self, rhs: &Matrixf<R, C>) -> Matrixf<R, C> {
+    fn add(mut self, rhs: &Matrix<T, R, C>) -> Matrix<T, R, C> {
         self.data
             .iter_mut()
             .flatten()
             .zip(rhs.data.iter().flatten())
-            .for_each(|(lhs, rhs)| *lhs += rhs);
+            .for_each(|(lhs, rhs)| *lhs += *rhs);
         self
     }
 }
 
-impl<const R: usize, const C: usize> Add<Matrixf<R, C>> for Matrixf<R, C> {
-    type Output = Matrixf<R, C>;
+impl<T: Numeric, const R: usize, const C: usize> Add<Matrix<T, R, C>> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
 
-    fn add(mut self, rhs: Matrixf<R, C>) -> Matrixf<R, C> {
+    fn add(mut self, rhs: Matrix<T, R, C>) -> Matrix<T, R, C> {
         self.data
             .iter_mut()
             .flatten()
             .zip(rhs.data.iter().flatten())
-            .for_each(|(lhs, rhs)| *lhs += rhs);
+            .for_each(|(lhs, rhs)| *lhs += *rhs);
         self
     }
 }
 
-impl<const R: usize, const C: usize> Add<f32> for Matrixf<R, C> {
-    type Output = Matrixf<R, C>;
+impl<T: Numeric, const R: usize, const C: usize> Add<T> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
 
-    fn add(mut self, rhs: f32) -> Matrixf<R, C> {
+    fn add(mut self, rhs: T) -> Matrix<T, R, C> {
         self.data.iter_mut().flatten().for_each(|x| *x += rhs);
         self
     }
 }
-impl<const R: usize, const C: usize> Mul<f32> for Matrixf<R, C> {
-    type Output = Matrixf<R, C>;
+impl<T: Numeric, const R: usize, const C: usize> Mul<T> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
 
-    fn mul(mut self, rhs: f32) -> Matrixf<R, C> {
+    fn mul(mut self, rhs: T) -> Matrix<T, R, C> {
         self.data.iter_mut().flatten().for_each(|x| *x *= rhs);
         self
     }
 }
 
-impl<const R: usize, const C: usize> Div<f32> for Matrixf<R, C> {
-    type Output = Matrixf<R, C>;
+impl<T: Numeric, const R: usize, const C: usize> Div<T> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
 
-    fn div(mut self, rhs: f32) -> Matrixf<R, C> {
+    fn div(mut self, rhs: T) -> Matrix<T, R, C> {
         self.data.iter_mut().flatten().for_each(|x| *x /= rhs);
         self
     }
