@@ -344,7 +344,7 @@ mod test {
         assert_eq!(a.normalized(), expected);
     }
     #[test]
-    fn test_multiply_with_vector() {
+    fn test_multiply4x4_with_vector3() {
         let m = Matrix4f::new([
             [1.0, 2.0, 3.0, 4.0],
             [5.0, 6.0, 7.0, 8.0],

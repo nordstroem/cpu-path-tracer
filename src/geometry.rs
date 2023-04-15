@@ -24,10 +24,10 @@ impl Camera {
         let right = forward.cross(&up).normalized();
         let up = right.cross(&forward).normalized();
         let sensor_size = sensor_size_px.x().max(sensor_size_px.y()) as f32;
-        let focal_length = (0.5 * sensor_size / (fov_rad * 0.5).tan()).abs();
+        let focal_length = (0.5 * (sensor_size - 1.0) / (fov_rad * 0.5).tan()).abs();
         let principal_point = Vector2f::xy(
-            sensor_size_px.x() as f32 / 2.0 + 0.5,
-            sensor_size_px.y() as f32 / 2.0 + 0.5,
+            sensor_size_px.x() as f32 / 2.0 - 0.5,
+            sensor_size_px.y() as f32 / 2.0 - 0.5,
         );
         Self {
             forward,
@@ -98,7 +98,7 @@ mod tests {
             Vector2i::xy(256, 256),
         );
 
-        let ray = camera.ray(128.5, 128.5);
+        let ray = camera.ray(127.5, 127.5);
         let tol = 1e-6;
         assert_approx!(ray.direction.x(), 0.0, tol);
         assert_approx!(ray.direction.y(), 0.0, tol);
@@ -114,7 +114,7 @@ mod tests {
         let up = Vector3f::xyz(0.0, 1.0, 0.0);
         let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 256));
 
-        let ray = camera.ray(0.5, 128.5);
+        let ray = camera.ray(0.0, 127.5);
         let tol = 1e-6;
         assert!(ray.direction.x() < 0.0);
         assert_approx!(
@@ -129,7 +129,7 @@ mod tests {
         let up = Vector3f::xyz(0.0, 1.0, 0.0);
         let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 256));
 
-        let ray = camera.ray(128.5, 0.5);
+        let ray = camera.ray(127.5, 0.0);
         let tol = 1e-6;
         assert!(ray.direction.y() > 0.0);
         assert_approx!(
