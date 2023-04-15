@@ -14,6 +14,12 @@ pub struct Image {
     pub data: Vec<Color>,
 }
 
+impl Color {
+    pub fn rgb(r: f32, g: f32, b: f32) -> Color {
+        Color { r, g, b }
+    }
+}
+
 impl Image {
     pub fn new(width: u32, height: u32) -> Image {
         let black = Color {
@@ -61,7 +67,7 @@ pub trait Shader {
         let height = image.height;
         image.data.iter_mut().enumerate().for_each(|(i, color)| {
             let x = i as u32 % width;
-            let y = i as u32 / height;
+            let y = i as u32 / width;
             *color = self.compute_color(x, y);
         })
     }

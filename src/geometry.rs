@@ -127,7 +127,7 @@ mod tests {
     fn test_camera_ray_up_side() {
         let forward = Vector3f::xyz(0.0, 0.0, -1.0);
         let up = Vector3f::xyz(0.0, 1.0, 0.0);
-        let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 256));
+        let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 512));
 
         let ray = camera.ray(127.5, 0.0);
         let tol = 1e-6;
