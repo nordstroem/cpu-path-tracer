@@ -1,6 +1,9 @@
+#[macro_use]
+mod approx;
 mod image;
 mod matrix;
 mod pathtracer;
+
 use image::{Color, Image, Shader};
 
 struct RainbowShader;

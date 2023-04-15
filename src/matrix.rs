@@ -109,6 +109,9 @@ impl<const R: usize> Matrix<f32, R, 1> {
     pub fn normalized(&self) -> Self {
         *self / self.length()
     }
+    pub fn cos_angle(&self, rhs: &Self) -> f32 {
+        self.dot(rhs) / (self.length() * rhs.length())
+    }
 }
 
 impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
