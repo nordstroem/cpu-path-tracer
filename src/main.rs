@@ -1,5 +1,6 @@
 #[macro_use]
 mod approx;
+mod geometry;
 mod image;
 mod matrix;
 mod pathtracer;
