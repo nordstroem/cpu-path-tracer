@@ -64,7 +64,6 @@ pub trait Shader {
 
     fn apply(&self, image: &mut Image) {
         let width = image.width;
-        let height = image.height;
         image.data.iter_mut().enumerate().for_each(|(i, color)| {
             let x = i as u32 % width;
             let y = i as u32 / width;
@@ -107,7 +106,6 @@ mod tests {
     }
 
     #[test]
-    #[rustfmt::skip]
     fn test_apply_shader() {
         let shader = ClosureShader(|x, y| Color {
             r: x as f32,
@@ -116,9 +114,9 @@ mod tests {
         });
         let mut image = Image::new(2, 2);
         shader.apply(&mut image);
-        assert_eq!(image.data[0], Color { r: 0.0, g: 0.0, b: 0.0 });
-        assert_eq!(image.data[1], Color { r: 1.0, g: 0.0, b: 0.0 });
-        assert_eq!(image.data[2], Color { r: 0.0, g: 1.0, b: 0.0 });
-        assert_eq!(image.data[3], Color { r: 1.0, g: 1.0, b: 0.0 });
+        assert_eq!(image.data[0], Color::rgb(0.0, 0.0, 0.0));
+        assert_eq!(image.data[1], Color::rgb(1.0, 0.0, 0.0));
+        assert_eq!(image.data[2], Color::rgb(0.0, 1.0, 0.0));
+        assert_eq!(image.data[3], Color::rgb(1.0, 1.0, 0.0));
     }
 }

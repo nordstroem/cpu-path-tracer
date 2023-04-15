@@ -106,6 +106,9 @@ impl<const R: usize> Matrix<f32, R, 1> {
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
     }
+    pub fn squared_length(&self) -> f32 {
+        self.dot(self)
+    }
     pub fn normalized(&self) -> Self {
         *self / self.length()
     }

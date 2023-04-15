@@ -11,7 +11,7 @@ use matrix::{Vector2i, Vector3f};
 use pathtracer::PathTracerShader;
 
 fn main() {
-    let image_size = Vector2i::xy(512, 256);
+    let image_size = Vector2i::xy(256, 256);
     let shader = PathTracerShader::new(Camera::new(
         Vector3f::xyz(0.0, 0.0, -1.0),
         Vector3f::xyz(0.0, 1.0, 0.0),

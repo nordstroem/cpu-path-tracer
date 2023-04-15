@@ -64,23 +64,25 @@ impl Sphere {
         Self { center, radius }
     }
 
-    pub fn intersect(&self, ray: &Ray) -> Option<f32> {
+    pub fn intersect(&self, ray: &Ray) -> Option<Vector3f> {
+        assert_approx!(ray.direction.length(), 1.0, 1e-6);
+
         let oc = ray.origin - self.center;
-        let a = ray.direction.dot(&ray.direction);
-        let b = 2.0 * oc.dot(&ray.direction);
-        let c = oc.dot(&oc) - self.radius * self.radius;
-        let discriminant = b * b - 4.0 * a * c;
+        let half_p = ray.direction.dot(&oc);
+        let q = oc.dot(&oc) - self.radius * self.radius;
+        let discriminant = half_p * half_p - q;
+
         if discriminant < 0.0 {
             return None;
         }
-        let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
-        let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
-        if t1 > 0.0 {
-            Some(t1)
-        } else if t2 > 0.0 {
-            Some(t2)
-        } else {
-            None
+
+        let t1 = -half_p - discriminant.sqrt();
+        let t2 = -half_p + discriminant.sqrt();
+        match (t1 > 0.0, t2 > 0.0) {
+            (true, true) => Some(ray.at(t1.min(t2))),
+            (true, false) => Some(ray.at(t1)),
+            (false, true) => Some(ray.at(t2)),
+            (false, false) => None,
         }
     }
 }
