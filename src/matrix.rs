@@ -63,7 +63,7 @@ impl<T: Numeric> Vector<T, 3> {
     pub fn homogeneous(&self) -> Vector<T, 4> {
         let mut result = Vector::zeros();
         for i in 0..3 {
-            result.data[i][0] = result.data[i][0];
+            result.data[i][0] = self.data[i][0];
         }
         result.data[3][0] = T::from(1);
         result
@@ -202,6 +202,19 @@ impl<T: Numeric, const R: usize, const C: usize> Add<Matrix<T, R, C>> for Matrix
     }
 }
 
+impl<T: Numeric, const R: usize, const C: usize> Sub<Matrix<T, R, C>> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
+
+    fn sub(mut self, rhs: Matrix<T, R, C>) -> Matrix<T, R, C> {
+        self.data
+            .iter_mut()
+            .flatten()
+            .zip(rhs.data.iter().flatten())
+            .for_each(|(lhs, rhs)| *lhs -= *rhs);
+        self
+    }
+}
+
 impl<T: Numeric, const R: usize, const C: usize> Add<T> for Matrix<T, R, C> {
     type Output = Matrix<T, R, C>;
 
@@ -210,6 +223,16 @@ impl<T: Numeric, const R: usize, const C: usize> Add<T> for Matrix<T, R, C> {
         self
     }
 }
+
+impl<T: Numeric, const R: usize, const C: usize> Sub<T> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
+
+    fn sub(mut self, rhs: T) -> Matrix<T, R, C> {
+        self.data.iter_mut().flatten().for_each(|x| *x += rhs);
+        self
+    }
+}
+
 impl<T: Numeric, const R: usize, const C: usize> Mul<T> for Matrix<T, R, C> {
     type Output = Matrix<T, R, C>;
 
@@ -331,7 +354,11 @@ mod test {
         let v = Vector3f::xyz(1.0, 2.0, 3.0);
         let w = 102.0;
         let expected = Vector3f::xyz(18.0 / w, 46.0 / w, 74.0 / w);
-        assert_eq!((&m * &v.homogeneous()).hnormalized(), expected);
+        let result = (&m * &v.homogeneous()).hnormalized();
+        let tol = 1e-6;
+        assert_approx!(result.x(), expected.x(), tol);
+        assert_approx!(result.y(), expected.y(), tol);
+        assert_approx!(result.z(), expected.z(), tol);
     }
 
     #[test]
@@ -355,5 +382,21 @@ mod test {
             [42.0, 44.0, 46.0, 48.0],
         ]);
         assert_eq!(a + b, expected);
+    }
+
+    #[test]
+    fn test_add_two_vectors() {
+        let a = Vector3f::xyz(1.0, 2.0, 3.0);
+        let b = Vector3f::xyz(4.0, 5.0, 6.0);
+        let expected = Vector3f::xyz(5.0, 7.0, 9.0);
+        assert_eq!(a + b, expected);
+    }
+
+    #[test]
+    fn test_subtract_two_vectors() {
+        let a = Vector3f::xyz(1.0, 2.0, 3.0);
+        let b = Vector3f::xyz(4.0, 5.0, 6.0);
+        let expected = Vector3f::xyz(-3.0, -3.0, -3.0);
+        assert_eq!(a - b, expected);
     }
 }

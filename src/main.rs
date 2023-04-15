@@ -5,23 +5,21 @@ mod image;
 mod matrix;
 mod pathtracer;
 
-use image::{Color, Image, Shader};
-
-struct RainbowShader;
-
-impl Shader for RainbowShader {
-    fn compute_color(&self, x: u32, y: u32) -> Color {
-        let r = (x % 256) as f32 / 255.0;
-        let g = (y % 256) as f32 / 255.0;
-        let b = 0.0;
-        Color { r, g, b }
-    }
-}
+use geometry::Camera;
+use image::{Image, Shader};
+use matrix::{Vector2i, Vector3f};
+use pathtracer::PathTracerShader;
 
 fn main() {
-    let shader = RainbowShader;
+    let shader = PathTracerShader {
+        camera: Camera::new(
+            Vector3f::xyz(0.0, 0.0, -1.0),
+            Vector3f::xyz(0.0, 1.0, 0.0),
+            90_f32.to_radians(),
+            Vector2i::xy(256, 256),
+        ),
+    };
     let mut img = Image::new(256, 256);
     shader.apply(&mut img);
     img.save("test.ppm");
-    println!("{}", 1);
 }

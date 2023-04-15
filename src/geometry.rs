@@ -1,11 +1,11 @@
 use matrix::{Vector2f, Vector2i, Vector3f};
 
 pub struct Camera {
-    pub forward: Vector3f,
-    pub up: Vector3f,
-    pub right: Vector3f,
-    pub focal_length: f32,
-    pub principal_point: Vector2f,
+    forward: Vector3f,
+    up: Vector3f,
+    right: Vector3f,
+    focal_length: f32,
+    principal_point: Vector2f,
 }
 
 pub struct Ray {
@@ -13,8 +13,13 @@ pub struct Ray {
     pub direction: Vector3f,
 }
 
+pub struct Sphere {
+    pub center: Vector3f,
+    pub radius: f32,
+}
+
 impl Camera {
-    fn new(forward: Vector3f, up: Vector3f, fov_rad: f32, sensor_size_px: Vector2i) -> Self {
+    pub fn new(forward: Vector3f, up: Vector3f, fov_rad: f32, sensor_size_px: Vector2i) -> Self {
         let forward = forward.normalized();
         let right = forward.cross(&up).normalized();
         let up = right.cross(&forward).normalized();
@@ -33,7 +38,7 @@ impl Camera {
         }
     }
 
-    fn ray(&self, x: f32, y: f32) -> Ray {
+    pub fn ray(&self, x: f32, y: f32) -> Ray {
         let x = x - self.principal_point.x();
         let y = self.principal_point.y() - y;
         Ray {
@@ -45,12 +50,38 @@ impl Camera {
 }
 
 impl Ray {
-    fn new(origin: Vector3f, direction: Vector3f) -> Self {
+    pub fn new(origin: Vector3f, direction: Vector3f) -> Self {
         Self { origin, direction }
     }
 
-    fn at(&self, t: f32) -> Vector3f {
+    pub fn at(&self, t: f32) -> Vector3f {
         self.origin + self.direction * t
+    }
+}
+
+impl Sphere {
+    pub fn new(center: Vector3f, radius: f32) -> Self {
+        Self { center, radius }
+    }
+
+    pub fn intersect(&self, ray: &Ray) -> Option<f32> {
+        let oc = ray.origin - self.center;
+        let a = ray.direction.dot(&ray.direction);
+        let b = 2.0 * oc.dot(&ray.direction);
+        let c = oc.dot(&oc) - self.radius * self.radius;
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant < 0.0 {
+            return None;
+        }
+        let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
+        let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+        if t1 > 0.0 {
+            Some(t1)
+        } else if t2 > 0.0 {
+            Some(t2)
+        } else {
+            None
+        }
     }
 }
 
