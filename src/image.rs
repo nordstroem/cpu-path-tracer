@@ -1,12 +1,6 @@
+use matrix::Vector3f;
 use std::fs::File;
 use std::io::Write;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-}
 
 pub struct Image {
     pub width: u32,
@@ -14,19 +8,26 @@ pub struct Image {
     pub data: Vec<Color>,
 }
 
+pub type Color = Vector3f;
+
 impl Color {
     pub fn rgb(r: f32, g: f32, b: f32) -> Color {
-        Color { r, g, b }
+        Color::xyz(r, g, b)
+    }
+    pub fn r(&self) -> f32 {
+        self.x()
+    }
+    pub fn g(&self) -> f32 {
+        self.y()
+    }
+    pub fn b(&self) -> f32 {
+        self.z()
     }
 }
 
 impl Image {
     pub fn new(width: u32, height: u32) -> Image {
-        let black = Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
+        let black = Color::rgb(0.0, 0.0, 0.0);
         Image {
             width,
             height,
@@ -46,7 +47,7 @@ impl Image {
         let data_bytes: Vec<u8> = self
             .data
             .iter()
-            .map(|c| [c.r, c.g, c.b])
+            .map(|c| [c.r(), c.g(), c.b()])
             .flatten()
             .map(float_to_byte)
             .collect();
@@ -107,11 +108,7 @@ mod tests {
 
     #[test]
     fn test_apply_shader() {
-        let shader = ClosureShader(|x, y| Color {
-            r: x as f32,
-            g: y as f32,
-            b: 0.0,
-        });
+        let shader = ClosureShader(|x, y| Color::rgb(x as f32, y as f32, 0.0));
         let mut image = Image::new(2, 2);
         shader.apply(&mut image);
         assert_eq!(image.data[0], Color::rgb(0.0, 0.0, 0.0));

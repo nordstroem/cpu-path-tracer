@@ -18,6 +18,15 @@ pub struct Sphere {
     pub radius: f32,
 }
 
+pub struct HitData {
+    pub intersection_point: Vector3f,
+    pub normal: Vector3f,
+}
+
+pub trait Hittable {
+    fn intersect(&self, ray: &Ray) -> Option<HitData>;
+}
+
 impl Camera {
     pub fn new(forward: Vector3f, up: Vector3f, fov_rad: f32, sensor_size_px: Vector2i) -> Self {
         let forward = forward.normalized();
@@ -38,9 +47,9 @@ impl Camera {
         }
     }
 
-    pub fn ray(&self, x: f32, y: f32) -> Ray {
+    pub fn back_project(&self, x: f32, y: f32) -> Ray {
         let x = x - self.principal_point.x();
-        let y = self.principal_point.y() - y;
+        let y = -(y - self.principal_point.y());
         Ray {
             origin: Vector3f::zeros(),
             direction: (self.forward * self.focal_length + self.right * x + self.up * y)
@@ -50,10 +59,6 @@ impl Camera {
 }
 
 impl Ray {
-    pub fn new(origin: Vector3f, direction: Vector3f) -> Self {
-        Self { origin, direction }
-    }
-
     pub fn at(&self, t: f32) -> Vector3f {
         self.origin + self.direction * t
     }
@@ -63,10 +68,10 @@ impl Sphere {
     pub fn new(center: Vector3f, radius: f32) -> Self {
         Self { center, radius }
     }
+}
 
-    pub fn intersect(&self, ray: &Ray) -> Option<Vector3f> {
-        assert_approx!(ray.direction.length(), 1.0, 1e-6);
-
+impl Hittable for Sphere {
+    fn intersect(&self, ray: &Ray) -> Option<HitData> {
         let oc = ray.origin - self.center;
         let half_p = ray.direction.dot(&oc);
         let q = oc.dot(&oc) - self.radius * self.radius;
@@ -78,12 +83,17 @@ impl Sphere {
 
         let t1 = -half_p - discriminant.sqrt();
         let t2 = -half_p + discriminant.sqrt();
-        match (t1 > 0.0, t2 > 0.0) {
-            (true, true) => Some(ray.at(t1.min(t2))),
-            (true, false) => Some(ray.at(t1)),
-            (false, true) => Some(ray.at(t2)),
-            (false, false) => None,
-        }
+        let intersection_point = match (t1 > 0.0, t2 > 0.0) {
+            (true, _) => ray.at(t1),
+            (false, true) => ray.at(t2),
+            (false, false) => return None,
+        };
+
+        let normal = (intersection_point - self.center) / self.radius;
+        Some(HitData {
+            intersection_point,
+            normal,
+        })
     }
 }
 
@@ -100,7 +110,7 @@ mod tests {
             Vector2i::xy(256, 256),
         );
 
-        let ray = camera.ray(127.5, 127.5);
+        let ray = camera.back_project(127.5, 127.5);
         let tol = 1e-6;
         assert_approx!(ray.direction.x(), 0.0, tol);
         assert_approx!(ray.direction.y(), 0.0, tol);
@@ -116,7 +126,7 @@ mod tests {
         let up = Vector3f::xyz(0.0, 1.0, 0.0);
         let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 256));
 
-        let ray = camera.ray(0.0, 127.5);
+        let ray = camera.back_project(0.0, 127.5);
         let tol = 1e-6;
         assert!(ray.direction.x() < 0.0);
         assert_approx!(
@@ -131,7 +141,7 @@ mod tests {
         let up = Vector3f::xyz(0.0, 1.0, 0.0);
         let camera = Camera::new(forward, up, 90_f32.to_radians(), Vector2i::xy(256, 512));
 
-        let ray = camera.ray(127.5, 0.0);
+        let ray = camera.back_project(127.5, 0.0);
         let tol = 1e-6;
         assert!(ray.direction.y() > 0.0);
         assert_approx!(

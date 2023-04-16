@@ -38,7 +38,6 @@ pub type Vector2i = Vector<i32, 2>;
 pub type Vector2f = Vector<f32, 2>;
 pub type Vector3f = Vector<f32, 3>;
 pub type Vector4f = Vector<f32, 4>;
-pub type Matrix4f = Matrix<f32, 4, 4>;
 
 impl<T: Numeric> Vector<T, 3> {
     pub fn xyz(x: T, y: T, z: T) -> Self {
@@ -102,6 +101,14 @@ impl<T: Numeric, const R: usize> Matrix<T, R, 1> {
     }
 }
 
+fn fast_inverse_sqrt(x: f32) -> f32 {
+    let xhalf = 0.5 * x;
+    let i = x.to_bits();
+    let i = 0x5f3759df - (i >> 1);
+    let y = f32::from_bits(i);
+    y * (1.5 - xhalf * y * y)
+}
+
 impl<const R: usize> Matrix<f32, R, 1> {
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
@@ -111,6 +118,9 @@ impl<const R: usize> Matrix<f32, R, 1> {
     }
     pub fn normalized(&self) -> Self {
         *self / self.length()
+    }
+    pub fn fast_normalized(&self) -> Self {
+        *self * fast_inverse_sqrt(self.squared_length())
     }
     pub fn cos_angle(&self, rhs: &Self) -> f32 {
         self.dot(rhs) / (self.length() * rhs.length())
@@ -192,6 +202,28 @@ impl<T: Numeric, const R: usize, const C: usize> Add<&Matrix<T, R, C>> for Matri
     }
 }
 
+impl<T: Numeric, const R: usize, const C: usize> AddAssign<Matrix<T, R, C>> for Matrix<T, R, C> {
+    fn add_assign(&mut self, rhs: Matrix<T, R, C>) {
+        self.data
+            .iter_mut()
+            .flatten()
+            .zip(rhs.data.iter().flatten())
+            .for_each(|(lhs, rhs)| *lhs += *rhs);
+    }
+}
+
+impl<T: Numeric, const R: usize, const C: usize> AddAssign<T> for Matrix<T, R, C> {
+    fn add_assign(&mut self, rhs: T) {
+        self.data.iter_mut().flatten().for_each(|lhs| *lhs += rhs);
+    }
+}
+
+impl<T: Numeric, const R: usize, const C: usize> DivAssign<T> for Matrix<T, R, C> {
+    fn div_assign(&mut self, rhs: T) {
+        self.data.iter_mut().flatten().for_each(|lhs| *lhs /= rhs);
+    }
+}
+
 impl<T: Numeric, const R: usize, const C: usize> Add<Matrix<T, R, C>> for Matrix<T, R, C> {
     type Output = Matrix<T, R, C>;
 
@@ -257,6 +289,7 @@ impl<T: Numeric, const R: usize, const C: usize> Div<T> for Matrix<T, R, C> {
 #[cfg(test)]
 mod test {
     use super::*;
+    pub type Matrix4f = Matrix<f32, 4, 4>;
 
     #[test]
     fn test_multiply_by_scalar() {
