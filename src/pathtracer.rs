@@ -19,7 +19,7 @@ impl Shader for PathTracerShader {
             let x = x + (rng.uniform() - 0.5);
             let y = y + (rng.uniform() - 0.5);
             let ray = self.camera.back_project(x, y);
-            color += self.compute_color_for_ray(&ray);
+            color += self.compute_color_for_ray(&ray, &mut rng);
         }
         color / (number_of_samples as f32)
     }
@@ -32,7 +32,7 @@ impl PathTracerShader {
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
         Self { camera, objects }
     }
-    fn compute_color_for_ray(&self, ray: &Ray) -> Color {
+    fn compute_color_for_ray(&self, ray: &Ray, rng: &mut Rng) -> Color {
         let compare = |a: &HitData, b: &HitData| {
             (ray.origin - a.intersection_point)
                 .squared_length()
@@ -46,6 +46,8 @@ impl PathTracerShader {
             .filter_map(|object| object.intersect(ray))
             .min_by(compare)
         {
+            let target = hit.intersection_point + hit.normal + rng.unit_sphere();
+
             Color::rgb(
                 0.5 * (1.0 + hit.normal.x()),
                 0.5 * (1.0 + hit.normal.y()),
