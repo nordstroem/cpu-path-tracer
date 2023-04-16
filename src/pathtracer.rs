@@ -1,4 +1,4 @@
-use geometry::{Camera, Hittable, Ray, Sphere};
+use geometry::{Camera, HitData, Hittable, Ray, Sphere};
 use image::{Color, Shader};
 use matrix::Vector3f;
 
@@ -9,9 +9,9 @@ pub struct PathTracerShader {
 
 impl PathTracerShader {
     pub fn new(camera: Camera) -> Self {
-        let sphere = Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5);
         let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
-        objects.push(Box::new(sphere));
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(1.0, 1.0, -2.0), 0.5)));
         Self { camera, objects }
     }
 }
@@ -38,15 +38,26 @@ impl Shader for PathTracerShader {
 
 impl PathTracerShader {
     fn compute_color_for_ray(&self, ray: &Ray) -> Color {
-        for object in &self.objects {
-            if let Some(hit) = object.intersect(&ray) {
-                return Color::rgb(
-                    0.5 * (1.0 + hit.normal.x()),
-                    0.5 * (1.0 + hit.normal.y()),
-                    0.5 * (1.0 + hit.normal.z()),
-                );
-            }
+        let compare = |a: &HitData, b: &HitData| {
+            (ray.origin - a.intersection_point)
+                .squared_length()
+                .partial_cmp(&(ray.origin - b.intersection_point).squared_length())
+                .unwrap()
+        };
+
+        if let Some(hit) = self
+            .objects
+            .iter()
+            .filter_map(|object| object.intersect(ray))
+            .min_by(compare)
+        {
+            Color::rgb(
+                0.5 * (1.0 + hit.normal.x()),
+                0.5 * (1.0 + hit.normal.y()),
+                0.5 * (1.0 + hit.normal.z()),
+            )
+        } else {
+            Color::rgb(0.0, 0.0, 0.0)
         }
-        Color::rgb(0.0, 0.0, 0.0)
     }
 }

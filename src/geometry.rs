@@ -80,9 +80,9 @@ impl Hittable for Sphere {
         if discriminant < 0.0 {
             return None;
         }
-
         let t1 = -half_p - discriminant.sqrt();
         let t2 = -half_p + discriminant.sqrt();
+
         let intersection_point = match (t1 > 0.0, t2 > 0.0) {
             (true, _) => ray.at(t1),
             (false, true) => ray.at(t2),
