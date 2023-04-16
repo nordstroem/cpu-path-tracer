@@ -1,7 +1,4 @@
 [package]
-name = "rust_tracer" # the name of the package
-version = "0.1.0"    # the current version, obeying semver
+name = "rust_tracer"
+version = "0.1.0"
 authors = ["Johan Nordström <cjs.nordstrom@gmail.com>"]
-
-# [dependencies]
-# nalgebra = "0.32.2"

@@ -7,35 +7,6 @@ pub struct PathTracerShader {
     objects: Vec<Box<dyn Hittable>>,
 }
 
-impl PathTracerShader {
-    pub fn new(camera: Camera) -> Self {
-        let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
-        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
-        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
-        Self { camera, objects }
-    }
-}
-
-struct Rng {
-    seed: f32,
-}
-
-impl Rng {
-    fn new(seed: f32) -> Self {
-        Self { seed }
-    }
-
-    fn next(&mut self) -> f32 {
-        self.seed = self.seed * 16807.0 % 2147483647.0;
-        self.seed / 2147483647.0
-    }
-}
-
-fn noise(seed: f32) -> f32 {
-    let x = seed.sin() * 43758.5453123;
-    x - x.floor()
-}
-
 impl Shader for PathTracerShader {
     fn compute_color(&self, x: u32, y: u32) -> Color {
         let x = x as f32;
@@ -45,8 +16,8 @@ impl Shader for PathTracerShader {
         let mut color = Color::rgb(0.0, 0.0, 0.0);
         let number_of_samples = 5;
         for _ in 0..number_of_samples {
-            let x = x + 0.5 * (rng.next() - 0.5);
-            let y = y + 0.5 * (rng.next() - 0.5);
+            let x = x + (rng.uniform() - 0.5);
+            let y = y + (rng.uniform() - 0.5);
             let ray = self.camera.back_project(x, y);
             color += self.compute_color_for_ray(&ray);
         }
@@ -55,6 +26,12 @@ impl Shader for PathTracerShader {
 }
 
 impl PathTracerShader {
+    pub fn new(camera: Camera) -> Self {
+        let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
+        Self { camera, objects }
+    }
     fn compute_color_for_ray(&self, ray: &Ray) -> Color {
         let compare = |a: &HitData, b: &HitData| {
             (ray.origin - a.intersection_point)
@@ -77,5 +54,27 @@ impl PathTracerShader {
         } else {
             Color::rgb(0.0, 0.0, 0.0)
         }
+    }
+}
+
+struct Rng {
+    seed: f32,
+}
+
+impl Rng {
+    fn new(seed: f32) -> Self {
+        Self { seed }
+    }
+    fn unit_sphere(&mut self) -> Vector3f {
+        let mut p = Vector3f::xyz(1.0, 1.0, 1.0);
+        while p.squared_length() >= 1.0 {
+            p = Vector3f::xyz(self.uniform(), self.uniform(), self.uniform()) * 2.0
+                - Vector3f::xyz(1.0, 1.0, 1.0);
+        }
+        p
+    }
+    fn uniform(&mut self) -> f32 {
+        self.seed = self.seed.sin() * 43758.5453123;
+        self.seed - self.seed.floor()
     }
 }

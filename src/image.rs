@@ -8,23 +8,6 @@ pub struct Image {
     pub data: Vec<Color>,
 }
 
-pub type Color = Vector3f;
-
-impl Color {
-    pub fn rgb(r: f32, g: f32, b: f32) -> Color {
-        Color::xyz(r, g, b)
-    }
-    pub fn r(&self) -> f32 {
-        self.x()
-    }
-    pub fn g(&self) -> f32 {
-        self.y()
-    }
-    pub fn b(&self) -> f32 {
-        self.z()
-    }
-}
-
 impl Image {
     pub fn new(width: u32, height: u32) -> Image {
         let black = Color::rgb(0.0, 0.0, 0.0);
@@ -57,6 +40,23 @@ impl Image {
             .chain(data_bytes.iter())
             .cloned()
             .collect()
+    }
+}
+
+pub type Color = Vector3f;
+
+impl Color {
+    pub fn rgb(r: f32, g: f32, b: f32) -> Color {
+        Color::xyz(r, g, b)
+    }
+    pub fn r(&self) -> f32 {
+        self.x()
+    }
+    pub fn g(&self) -> f32 {
+        self.y()
+    }
+    pub fn b(&self) -> f32 {
+        self.z()
     }
 }
 
