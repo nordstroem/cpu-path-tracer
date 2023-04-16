@@ -11,28 +11,46 @@ impl PathTracerShader {
     pub fn new(camera: Camera) -> Self {
         let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
-        objects.push(Box::new(Sphere::new(Vector3f::xyz(1.0, 1.0, -2.0), 0.5)));
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
         Self { camera, objects }
     }
+}
+
+struct Rng {
+    seed: f32,
+}
+
+impl Rng {
+    fn new(seed: f32) -> Self {
+        Self { seed }
+    }
+
+    fn next(&mut self) -> f32 {
+        self.seed = self.seed * 16807.0 % 2147483647.0;
+        self.seed / 2147483647.0
+    }
+}
+
+fn noise(seed: f32) -> f32 {
+    let x = seed.sin() * 43758.5453123;
+    x - x.floor()
 }
 
 impl Shader for PathTracerShader {
     fn compute_color(&self, x: u32, y: u32) -> Color {
         let x = x as f32;
         let y = y as f32;
-        let sample_points = [
-            (x - 0.25, y - 0.25),
-            (x + 0.25, y - 0.25),
-            (x - 0.25, y + 0.25),
-            (x + 0.25, y + 0.25),
-            (x, y),
-        ];
+
+        let mut rng = Rng::new(x + y * 1000.0);
         let mut color = Color::rgb(0.0, 0.0, 0.0);
-        for (x, y) in &sample_points {
-            let ray = self.camera.back_project(*x, *y);
+        let number_of_samples = 5;
+        for _ in 0..number_of_samples {
+            let x = x + 0.5 * (rng.next() - 0.5);
+            let y = y + 0.5 * (rng.next() - 0.5);
+            let ray = self.camera.back_project(x, y);
             color += self.compute_color_for_ray(&ray);
         }
-        color / (sample_points.len() as f32)
+        color / (number_of_samples as f32)
     }
 }
 

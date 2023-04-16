@@ -89,7 +89,10 @@ impl Hittable for Sphere {
             (false, false) => return None,
         };
 
-        let normal = (intersection_point - self.center) / self.radius;
+        let mut normal = (intersection_point - self.center) / self.radius;
+        if normal.dot(&ray.direction) > 0.0 {
+            normal = normal * -1.0;
+        }
         Some(HitData {
             intersection_point,
             normal,
