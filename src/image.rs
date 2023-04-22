@@ -60,6 +60,10 @@ impl Color {
     }
 }
 
+pub fn gamma_correct(color: Color) -> Color {
+    Color::rgb(color.r().sqrt(), color.g().sqrt(), color.b().sqrt())
+}
+
 pub trait Shader {
     fn compute_color(&self, x: u32, y: u32) -> Color;
 

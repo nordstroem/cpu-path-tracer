@@ -6,6 +6,7 @@ pub struct Camera {
     right: Vector3f,
     focal_length: f32,
     principal_point: Vector2f,
+    pub sensor_size_px: Vector2i,
 }
 
 pub struct Ray {
@@ -44,6 +45,7 @@ impl Camera {
             right,
             focal_length,
             principal_point,
+            sensor_size_px,
         }
     }
 
