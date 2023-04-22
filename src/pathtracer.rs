@@ -5,6 +5,7 @@ use matrix::Vector3f;
 pub struct PathTracerShader {
     pub camera: Camera,
     objects: Vec<Box<dyn Hittable>>,
+    seed: f32,
 }
 
 impl Shader for PathTracerShader {
@@ -12,17 +13,17 @@ impl Shader for PathTracerShader {
         let x = x as f32;
         let y = y as f32;
 
-        let mut rng = Rng::new(x + y * 1000.0);
+        let mut rng = Rng::new(self.seed + x + y * 100.0);
         let mut color = Color::rgb(0.0, 0.0, 0.0);
-        let number_of_samples = 50;
-        let max_depth = 10;
+        let number_of_samples = 25;
+        let max_depth = 25;
         for _ in 0..number_of_samples {
             let x = x + (rng.uniform() - 0.5);
             let y = y + (rng.uniform() - 0.5);
             let ray = self.camera.back_project(x, y);
             color += self.compute_color_for_ray(&ray, &mut rng, max_depth);
         }
-        gamma_correct(color / (number_of_samples as f32))
+        gamma_correct(color / (number_of_samples as f32)).clamp(0.0, 1.0)
     }
 }
 
@@ -31,12 +32,16 @@ fn gamma_correct(color: Color) -> Color {
 }
 
 impl PathTracerShader {
-    pub fn new(camera: Camera) -> Self {
+    pub fn new(camera: Camera, seed: f32) -> Self {
         let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.8, -0.4, -1.0), 0.3)));
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
-        Self { camera, objects }
+        Self {
+            camera,
+            objects,
+            seed,
+        }
     }
 
     fn compute_color_for_ray(&self, ray: &Ray, rng: &mut Rng, max_depth: i32) -> Color {
@@ -50,11 +55,12 @@ impl PathTracerShader {
             return Color::rgb(0.0, 0.0, 0.0);
         }
 
-        let min_distance = 1e-3;
+        const MIN_DISTANCE: f32 = 1e-3;
+
         if let Some(hit) = self
             .objects
             .iter()
-            .filter_map(|object| object.intersect(ray, min_distance))
+            .filter_map(|object| object.intersect(ray, MIN_DISTANCE))
             .min_by(compare)
         {
             let target = hit.intersection_point + hit.normal + rng.unit_sphere();

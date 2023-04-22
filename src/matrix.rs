@@ -11,6 +11,7 @@ pub trait Numeric:
     + Div<Output = Self>
     + Sub<Output = Self>
     + SubAssign
+    + PartialOrd
 {
 }
 impl<
@@ -23,7 +24,8 @@ impl<
             + AddAssign
             + MulAssign
             + DivAssign
-            + SubAssign,
+            + SubAssign
+            + PartialOrd,
     > Numeric for T
 {
 }
@@ -130,6 +132,13 @@ impl<const R: usize> Matrix<f32, R, 1> {
     }
     pub fn cos_angle(&self, rhs: &Self) -> f32 {
         self.dot(rhs) / (self.length() * rhs.length())
+    }
+    pub fn clamp(&self, min: f32, max: f32) -> Self {
+        let mut result = Matrix::zeros();
+        for i in 0..R {
+            result.data[i][0] = self.data[i][0].max(min).min(max);
+        }
+        result
     }
 }
 
