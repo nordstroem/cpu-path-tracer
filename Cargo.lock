@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "rust_tracer"
+name = "cpu_path_tracer"
 version = "0.1.0"

@@ -1,4 +1,4 @@
 [package]
-name = "rust_tracer"
+name = "cpu_path_tracer"
 version = "0.1.0"
 authors = ["Johan Nordström <cjs.nordstrom@gmail.com>"]

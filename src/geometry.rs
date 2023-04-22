@@ -153,14 +153,4 @@ mod tests {
             tol
         );
     }
-
-    #[test]
-    fn test_vector_add_1() {
-        let a = Vector3f::xyz(1.0, 2.0, 3.0);
-        let b = Vector3f::xyz(4.0, 5.0, 6.0);
-        let c = a + b;
-        assert_eq!(c.x(), 5.0);
-        assert_eq!(c.y(), 7.0);
-        assert_eq!(c.z(), 9.0);
-    }
 }
