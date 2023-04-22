@@ -14,47 +14,57 @@ impl Shader for PathTracerShader {
 
         let mut rng = Rng::new(x + y * 1000.0);
         let mut color = Color::rgb(0.0, 0.0, 0.0);
-        let number_of_samples = 5;
+        let number_of_samples = 50;
+        let max_depth = 10;
         for _ in 0..number_of_samples {
             let x = x + (rng.uniform() - 0.5);
             let y = y + (rng.uniform() - 0.5);
             let ray = self.camera.back_project(x, y);
-            color += self.compute_color_for_ray(&ray, &mut rng);
+            color += self.compute_color_for_ray(&ray, &mut rng, max_depth);
         }
-        color / (number_of_samples as f32)
+        gamma_correct(color / (number_of_samples as f32))
     }
+}
+
+fn gamma_correct(color: Color) -> Color {
+    Color::rgb(color.r().sqrt(), color.g().sqrt(), color.b().sqrt())
 }
 
 impl PathTracerShader {
     pub fn new(camera: Camera) -> Self {
         let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)));
+        objects.push(Box::new(Sphere::new(Vector3f::xyz(0.8, -0.4, -1.0), 0.3)));
         objects.push(Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)));
         Self { camera, objects }
     }
-    fn compute_color_for_ray(&self, ray: &Ray, rng: &mut Rng) -> Color {
+
+    fn compute_color_for_ray(&self, ray: &Ray, rng: &mut Rng, max_depth: i32) -> Color {
         let compare = |a: &HitData, b: &HitData| {
-            (ray.origin - a.intersection_point)
-                .squared_length()
-                .partial_cmp(&(ray.origin - b.intersection_point).squared_length())
+            (ray.origin.squared_distance(&a.intersection_point))
+                .partial_cmp(&ray.origin.squared_distance(&b.intersection_point))
                 .unwrap()
         };
 
+        if max_depth <= 0 {
+            return Color::rgb(0.0, 0.0, 0.0);
+        }
+
+        let min_distance = 1e-3;
         if let Some(hit) = self
             .objects
             .iter()
-            .filter_map(|object| object.intersect(ray))
+            .filter_map(|object| object.intersect(ray, min_distance))
             .min_by(compare)
         {
             let target = hit.intersection_point + hit.normal + rng.unit_sphere();
-
-            Color::rgb(
-                0.5 * (1.0 + hit.normal.x()),
-                0.5 * (1.0 + hit.normal.y()),
-                0.5 * (1.0 + hit.normal.z()),
-            )
+            let ray = Ray {
+                origin: hit.intersection_point,
+                direction: (target - hit.intersection_point).normalized(),
+            };
+            return self.compute_color_for_ray(&ray, rng, max_depth - 1) * 0.5;
         } else {
-            Color::rgb(0.0, 0.0, 0.0)
+            Color::rgb(1.0, 1.0, 1.0) // Light color
         }
     }
 }
@@ -70,13 +80,50 @@ impl Rng {
     fn unit_sphere(&mut self) -> Vector3f {
         let mut p = Vector3f::xyz(1.0, 1.0, 1.0);
         while p.squared_length() >= 1.0 {
-            p = Vector3f::xyz(self.uniform(), self.uniform(), self.uniform()) * 2.0
-                - Vector3f::xyz(1.0, 1.0, 1.0);
+            p = Vector3f::xyz(
+                2.0 * self.uniform() - 1.0,
+                2.0 * self.uniform() - 1.0,
+                2.0 * self.uniform() - 1.0,
+            )
         }
         p
     }
     fn uniform(&mut self) -> f32 {
-        self.seed = self.seed.sin() * 43758.5453123;
+        let mut new_seed = self.seed.sin() * 43758.5453123;
+        if new_seed == self.seed {
+            new_seed += 0.01;
+        }
+        self.seed = new_seed;
         self.seed - self.seed.floor()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unit_sphere() {
+        let mut rng = Rng::new(0.0);
+        let mut points = Vec::new();
+        for _ in 0..100 {
+            let point = rng.unit_sphere();
+            assert!(point.squared_length() < 1.0);
+            assert!(!points.contains(&point));
+            points.push(point);
+        }
+    }
+
+    #[test]
+    fn test_uniform() {
+        let mut rng = Rng::new(0.0);
+        let mut numbers = Vec::new();
+        for _ in 0..100 {
+            numbers.push(rng.uniform());
+        }
+        let mut rng = Rng::new(0.0);
+        for number in numbers {
+            assert_eq!(number, rng.uniform());
+        }
     }
 }

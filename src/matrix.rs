@@ -113,6 +113,12 @@ impl<const R: usize> Matrix<f32, R, 1> {
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
     }
+    pub fn distance(&self, rhs: &Self) -> f32 {
+        (*self - *rhs).length()
+    }
+    pub fn squared_distance(&self, rhs: &Self) -> f32 {
+        (*self - *rhs).squared_length()
+    }
     pub fn squared_length(&self) -> f32 {
         self.dot(self)
     }

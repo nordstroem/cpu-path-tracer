@@ -24,7 +24,7 @@ pub struct HitData {
 }
 
 pub trait Hittable {
-    fn intersect(&self, ray: &Ray) -> Option<HitData>;
+    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
 }
 
 impl Camera {
@@ -71,7 +71,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn intersect(&self, ray: &Ray) -> Option<HitData> {
+    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData> {
         let oc = ray.origin - self.center;
         let half_p = ray.direction.dot(&oc);
         let q = oc.dot(&oc) - self.radius * self.radius;
@@ -83,7 +83,7 @@ impl Hittable for Sphere {
         let t1 = -half_p - discriminant.sqrt();
         let t2 = -half_p + discriminant.sqrt();
 
-        let intersection_point = match (t1 > 0.0, t2 > 0.0) {
+        let intersection_point = match (t1 > min_distance, t2 > min_distance) {
             (true, _) => ray.at(t1),
             (false, true) => ray.at(t2),
             (false, false) => return None,
@@ -152,5 +152,15 @@ mod tests {
             45_f32.to_radians().cos(),
             tol
         );
+    }
+
+    #[test]
+    fn test_vector_add_1() {
+        let a = Vector3f::xyz(1.0, 2.0, 3.0);
+        let b = Vector3f::xyz(4.0, 5.0, 6.0);
+        let c = a + b;
+        assert_eq!(c.x(), 5.0);
+        assert_eq!(c.y(), 7.0);
+        assert_eq!(c.z(), 9.0);
     }
 }
