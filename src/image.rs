@@ -64,29 +64,6 @@ pub fn gamma_correct(color: Color) -> Color {
     Color::rgb(color.r().sqrt(), color.g().sqrt(), color.b().sqrt())
 }
 
-pub trait Shader {
-    fn compute_color(&self, x: u32, y: u32) -> Color;
-
-    fn apply(&self, image: &mut Image) {
-        let width = image.width;
-        image.data.iter_mut().enumerate().for_each(|(i, color)| {
-            let x = i as u32 % width;
-            let y = i as u32 / width;
-            *color = self.compute_color(x, y);
-        })
-    }
-}
-
-// This is a wrapper around a closure that implements the Shader trait.
-// This allows us to pass a closure to the apply_shader function.
-pub struct ClosureShader<F: Fn(u32, u32) -> Color>(F);
-
-impl<F: Fn(u32, u32) -> Color> Shader for ClosureShader<F> {
-    fn compute_color(&self, x: u32, y: u32) -> Color {
-        (self.0)(x, y)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,16 +85,5 @@ mod tests {
         assert_eq!(ppm.len(), expected_num_bytes as usize);
         assert!(ppm.starts_with(expected_header.as_bytes()));
         assert!(ppm.ends_with(&[0, 0, 0][..]));
-    }
-
-    #[test]
-    fn test_apply_shader() {
-        let shader = ClosureShader(|x, y| Color::rgb(x as f32, y as f32, 0.0));
-        let mut image = Image::new(2, 2);
-        shader.apply(&mut image);
-        assert_eq!(image.data[0], Color::rgb(0.0, 0.0, 0.0));
-        assert_eq!(image.data[1], Color::rgb(1.0, 0.0, 0.0));
-        assert_eq!(image.data[2], Color::rgb(0.0, 1.0, 0.0));
-        assert_eq!(image.data[3], Color::rgb(1.0, 1.0, 0.0));
     }
 }
