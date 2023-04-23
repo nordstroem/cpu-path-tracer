@@ -52,12 +52,14 @@ impl Ray {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum Material {
     Lambertian { albedo: Vector3f },
 }
 pub struct HitData {
     pub intersection_point: Vector3f,
     pub normal: Vector3f,
+    pub material: Material,
 }
 
 pub trait Hittable: Sync {
@@ -67,6 +69,7 @@ pub trait Hittable: Sync {
 pub struct Sphere {
     pub center: Vector3f,
     pub radius: f32,
+    pub material: Material,
 }
 
 impl Hittable for Sphere {
@@ -95,6 +98,7 @@ impl Hittable for Sphere {
         Some(HitData {
             intersection_point,
             normal,
+            material: self.material,
         })
     }
 }

@@ -6,7 +6,7 @@ mod matrix;
 mod renderer;
 mod rng;
 
-use geometry::{Camera, Hittable, Sphere};
+use geometry::{Camera, Hittable, Material, Sphere};
 use matrix::{Vector2i, Vector3f};
 use renderer::Renderer;
 use std::time::Instant;
@@ -23,14 +23,23 @@ fn main() {
         Box::new(Sphere {
             center: Vector3f::xyz(0.0, 0.0, -1.0),
             radius: 0.5,
+            material: Material::Lambertian {
+                albedo: Vector3f::rgb(0.1, 0.2, 0.5),
+            },
         }),
         Box::new(Sphere {
             center: Vector3f::xyz(0.8, -0.4, -1.0),
             radius: 0.3,
+            material: Material::Lambertian {
+                albedo: Vector3f::rgb(0.1, 0.9, 0.5),
+            },
         }),
         Box::new(Sphere {
             center: Vector3f::xyz(0.0, -20.5, 0.0),
             radius: 20.0,
+            material: Material::Lambertian {
+                albedo: Vector3f::rgb(0.5, 0.2, 0.5),
+            },
         }),
     ];
     let renderer = Renderer {

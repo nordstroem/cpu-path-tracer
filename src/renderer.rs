@@ -1,4 +1,4 @@
-use geometry::{Camera, HitData, Hittable, Ray};
+use geometry::{Camera, HitData, Hittable, Material, Ray};
 use image::{gamma_correct, Color, Image};
 use rng::Rng;
 
@@ -82,7 +82,10 @@ impl Renderer {
                 origin: hit.intersection_point,
                 direction: (target - hit.intersection_point).normalized(),
             };
-            return self.compute_color_for_ray(&ray, rng, max_depth - 1) * 0.5;
+            let color = match hit.material {
+                Material::Lambertian { albedo } => albedo,
+            };
+            return self.compute_color_for_ray(&ray, rng, max_depth - 1) * color;
         } else {
             self.ambient_light_color
         }

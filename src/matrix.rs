@@ -74,7 +74,6 @@ impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
         }
         result
     }
-
     pub fn mat_mul<const C2: usize>(&self, rhs: &Matrix<T, C, C2>) -> Matrix<T, R, C2> {
         let mut result = Matrix::<T, R, C2>::zeros();
         for i in 0..R {
