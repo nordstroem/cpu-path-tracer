@@ -11,7 +11,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn render(&self, seed: f32) -> Image {
+    pub fn render(&self, seed: u32) -> Image {
         let image_size = self.camera.sensor_size_px;
         let mut rng = Rng::new(seed);
         let mut image = Image::new(image_size.x() as u32, image_size.y() as u32);
@@ -24,7 +24,7 @@ impl Renderer {
         image
     }
 
-    pub fn average_render(&self, seeds: &Vec<f32>) -> Image {
+    pub fn average_render(&self, seeds: &Vec<u32>) -> Image {
         let image_size = self.camera.sensor_size_px;
         let weight = 1.0 / seeds.len() as f32;
 

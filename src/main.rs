@@ -13,12 +13,11 @@ use std::time::Instant;
 
 fn main() {
     let now = Instant::now();
-    let image_size = Vector2i::xy(326, 256);
     let camera = Camera::new(
         Vector3f::xyz(0.0, 0.0, -1.0),
         Vector3f::xyz(0.0, 1.0, 0.0),
         100_f32.to_radians(),
-        image_size,
+        Vector2i::xy(326, 256),
     );
     let objects: Vec<Box<dyn Hittable>> = vec![
         Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)),
@@ -32,7 +31,7 @@ fn main() {
         max_depth: 25,
         samples_per_pixel: 25,
     };
-    let seeds = vec![42.0, 43.0, 44.0, 45.0, 46.0, 47.0, 48.0, 49.0];
+    let seeds = vec![1, 2, 3, 4, 5, 6, 7, 8];
     let img = renderer.average_render(&seeds);
     img.save("test.ppm");
     let elapsed = now.elapsed();
