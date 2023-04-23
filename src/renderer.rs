@@ -11,10 +11,6 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn add_object(&mut self, object: Box<dyn Hittable>) {
-        self.objects.push(object);
-    }
-
     pub fn render(&self, seed: f32) -> Image {
         let image_size = self.camera.sensor_size_px;
         let mut rng = Rng::new(seed);
@@ -28,41 +24,25 @@ impl Renderer {
         image
     }
 
-    // pub fn average_render(&self, seeds: Vec<f32>) -> Image {
-    //     let mut images = Vec::new();
-    //     for seed in seeds {
-    //         let thread = std::thread::spawn(move || self.render(seed));
-    //         // images.push();
-    //     }
-    //     Image::new(0, 0)
-    // }
-    //     let mut images = Vec::new();
-    //     let num_threads = 8;
-    //     for i in 0..num_threads {
-    //         images.push(std::thread::spawn(move || {
-    //             let shader = PathTracerShader::new(
-    //                 Camera::new(
-    //                     Vector3f::xyz(0.0, 0.0, -1.0),
-    //                     Vector3f::xyz(0.0, 1.0, 0.0),
-    //                     100_f32.to_radians(),
-    //                     image_size,
-    //                 ),
-    //                 (i * 10) as f32,
-    //             );
-    //             let mut img = Image::new(image_size.x() as u32, image_size.y() as u32);
-    //             shader.apply(&mut img);
-    //             img
-    //         }));
-    //     }
-    //     let mut img = Image::new(image_size.x() as u32, image_size.y() as u32);
-    //     let weight = 1.0 / images.len() as f32;
-    //     for image in images {
-    //         let image = image.join().unwrap().data;
-    //         for i in 0..image.len() {
-    //             img.data[i] += image[i] * weight;
-    //         }
-    //     }
-    // }
+    pub fn average_render(&self, seeds: &Vec<f32>) -> Image {
+        let image_size = self.camera.sensor_size_px;
+        let weight = 1.0 / seeds.len() as f32;
+
+        std::thread::scope(|s| {
+            let mut threads = Vec::new();
+            for seed in seeds {
+                threads.push(s.spawn(move || self.render(*seed)));
+            }
+            let mut average_image = Image::new(image_size.x() as u32, image_size.y() as u32);
+            for thread in threads {
+                let image = thread.join().unwrap();
+                for i in 0..image.data.len() {
+                    average_image.data[i] += image.data[i] * weight;
+                }
+            }
+            average_image
+        })
+    }
 
     fn compute_color_for_pixel(&self, x: u32, y: u32, rng: &mut Rng) -> Color {
         let x = x as f32;

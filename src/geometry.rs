@@ -24,7 +24,7 @@ pub struct HitData {
     pub normal: Vector3f,
 }
 
-pub trait Hittable {
+pub trait Hittable: Sync {
     fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
 }
 
