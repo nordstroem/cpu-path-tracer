@@ -20,13 +20,22 @@ fn main() {
         Vector2i::xy(326, 256),
     );
     let objects: Vec<Box<dyn Hittable>> = vec![
-        Box::new(Sphere::new(Vector3f::xyz(0.0, 0.0, -1.0), 0.5)),
-        Box::new(Sphere::new(Vector3f::xyz(0.8, -0.4, -1.0), 0.3)),
-        Box::new(Sphere::new(Vector3f::xyz(0.0, -20.5, 0.0), 20.0)),
+        Box::new(Sphere {
+            center: Vector3f::xyz(0.0, 0.0, -1.0),
+            radius: 0.5,
+        }),
+        Box::new(Sphere {
+            center: Vector3f::xyz(0.8, -0.4, -1.0),
+            radius: 0.3,
+        }),
+        Box::new(Sphere {
+            center: Vector3f::xyz(0.0, -20.5, 0.0),
+            radius: 20.0,
+        }),
     ];
     let renderer = Renderer {
-        camera: camera,
-        objects: objects,
+        camera,
+        objects,
         ambient_light_color: Vector3f::rgb(1.0, 1.0, 1.0),
         max_depth: 25,
         samples_per_pixel: 25,

@@ -9,25 +9,6 @@ pub struct Camera {
     pub sensor_size_px: Vector2i,
 }
 
-pub struct Ray {
-    pub origin: Vector3f,
-    pub direction: Vector3f,
-}
-
-pub struct Sphere {
-    pub center: Vector3f,
-    pub radius: f32,
-}
-
-pub struct HitData {
-    pub intersection_point: Vector3f,
-    pub normal: Vector3f,
-}
-
-pub trait Hittable: Sync {
-    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
-}
-
 impl Camera {
     pub fn new(forward: Vector3f, up: Vector3f, fov_rad: f32, sensor_size_px: Vector2i) -> Self {
         let forward = forward.normalized();
@@ -60,16 +41,20 @@ impl Camera {
     }
 }
 
+pub struct Ray {
+    pub origin: Vector3f,
+    pub direction: Vector3f,
+}
+
 impl Ray {
     pub fn at(&self, t: f32) -> Vector3f {
         self.origin + self.direction * t
     }
 }
 
-impl Sphere {
-    pub fn new(center: Vector3f, radius: f32) -> Self {
-        Self { center, radius }
-    }
+pub struct Sphere {
+    pub center: Vector3f,
+    pub radius: f32,
 }
 
 impl Hittable for Sphere {
@@ -100,6 +85,15 @@ impl Hittable for Sphere {
             normal,
         })
     }
+}
+
+pub struct HitData {
+    pub intersection_point: Vector3f,
+    pub normal: Vector3f,
+}
+
+pub trait Hittable: Sync {
+    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
 }
 
 #[cfg(test)]
