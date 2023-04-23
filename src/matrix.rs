@@ -41,107 +41,7 @@ pub type Vector2f = Vector<f32, 2>;
 pub type Vector3f = Vector<f32, 3>;
 pub type Vector4f = Vector<f32, 4>;
 
-impl<T: Numeric> Vector<T, 3> {
-    pub fn xyz(x: T, y: T, z: T) -> Self {
-        Self::new([[x], [y], [z]])
-    }
-    pub fn cross(&self, rhs: &Self) -> Self {
-        Self::xyz(
-            self.y() * rhs.z() - self.z() * rhs.y(),
-            self.z() * rhs.x() - self.x() * rhs.z(),
-            self.x() * rhs.y() - self.y() * rhs.x(),
-        )
-    }
-    pub fn x(&self) -> T {
-        self.data[0][0]
-    }
-    pub fn y(&self) -> T {
-        self.data[1][0]
-    }
-    pub fn z(&self) -> T {
-        self.data[2][0]
-    }
-    pub fn homogeneous(&self) -> Vector<T, 4> {
-        let mut result = Vector::zeros();
-        for i in 0..3 {
-            result.data[i][0] = self.data[i][0];
-        }
-        result.data[3][0] = T::from(1);
-        result
-    }
-}
-
-impl<T: Numeric> Vector<T, 2> {
-    pub fn xy(x: T, y: T) -> Self {
-        Self::new([[x], [y]])
-    }
-    pub fn x(&self) -> T {
-        self.data[0][0]
-    }
-    pub fn y(&self) -> T {
-        self.data[1][0]
-    }
-}
-
-impl Vector4f {
-    pub fn hnormalized(&self) -> Vector3f {
-        let mut result = Matrix::zeros();
-        for i in 0..3 {
-            result.data[i][0] = self.data[i][0] / self.data[3][0]
-        }
-        result
-    }
-}
-
-impl<T: Numeric, const R: usize> Matrix<T, R, 1> {
-    pub fn dot(&self, rhs: &Matrix<T, R, 1>) -> T {
-        let mut result = T::from(0);
-        for i in 0..R {
-            result += self.data[i][0] * rhs.data[i][0];
-        }
-        result
-    }
-}
-
-fn fast_inverse_sqrt(x: f32) -> f32 {
-    let xhalf = 0.5 * x;
-    let i = x.to_bits();
-    let i = 0x5f3759df - (i >> 1);
-    let y = f32::from_bits(i);
-    y * (1.5 - xhalf * y * y)
-}
-
-impl<const R: usize> Matrix<f32, R, 1> {
-    pub fn length(&self) -> f32 {
-        self.dot(self).sqrt()
-    }
-    pub fn distance(&self, rhs: &Self) -> f32 {
-        (*self - *rhs).length()
-    }
-    pub fn squared_distance(&self, rhs: &Self) -> f32 {
-        (*self - *rhs).squared_length()
-    }
-    pub fn squared_length(&self) -> f32 {
-        self.dot(self)
-    }
-    pub fn normalized(&self) -> Self {
-        *self / self.length()
-    }
-    pub fn fast_normalized(&self) -> Self {
-        *self * fast_inverse_sqrt(self.squared_length())
-    }
-    pub fn cos_angle(&self, rhs: &Self) -> f32 {
-        self.dot(rhs) / (self.length() * rhs.length())
-    }
-    pub fn clamp(&self, min: f32, max: f32) -> Self {
-        let mut result = Matrix::zeros();
-        for i in 0..R {
-            result.data[i][0] = self.data[i][0].max(min).min(max);
-        }
-        result
-    }
-}
-
+// Generic matrix operations
 impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
     pub fn new(data: [[T; C]; R]) -> Self {
         Self { data }
@@ -174,28 +74,12 @@ impl<T: Numeric, const R: usize, const C: usize> Matrix<T, R, C> {
         }
         result
     }
-}
 
-impl<T: Numeric, const S: usize> Matrix<T, S, S> {
-    pub fn identity() -> Self {
-        let mut result = Self::zeros();
-        for i in 0..S {
-            result.data[i][i] = T::from(1);
-        }
-        result
-    }
-}
-
-impl<T: Numeric, const R1: usize, const C1: usize, const C2: usize> Mul<&Matrix<T, C1, C2>>
-    for &Matrix<T, R1, C1>
-{
-    type Output = Matrix<T, R1, C2>;
-
-    fn mul(self, rhs: &Matrix<T, C1, C2>) -> Matrix<T, R1, C2> {
-        let mut result = Matrix::<T, R1, C2>::zeros();
-        for i in 0..R1 {
+    pub fn mat_mul<const C2: usize>(&self, rhs: &Matrix<T, C, C2>) -> Matrix<T, R, C2> {
+        let mut result = Matrix::<T, R, C2>::zeros();
+        for i in 0..R {
             for j in 0..C2 {
-                for k in 0..C1 {
+                for k in 0..C {
                     result.data[i][j] += self.data[i][k] * rhs.data[k][j];
                 }
             }
@@ -265,6 +149,19 @@ impl<T: Numeric, const R: usize, const C: usize> Sub<Matrix<T, R, C>> for Matrix
     }
 }
 
+impl<T: Numeric, const R: usize, const C: usize> Mul<Matrix<T, R, C>> for Matrix<T, R, C> {
+    type Output = Matrix<T, R, C>;
+
+    fn mul(mut self, rhs: Matrix<T, R, C>) -> Matrix<T, R, C> {
+        self.data
+            .iter_mut()
+            .flatten()
+            .zip(rhs.data.iter().flatten())
+            .for_each(|(lhs, rhs)| *lhs *= *rhs);
+        self
+    }
+}
+
 impl<T: Numeric, const R: usize, const C: usize> Add<T> for Matrix<T, R, C> {
     type Output = Matrix<T, R, C>;
 
@@ -301,6 +198,121 @@ impl<T: Numeric, const R: usize, const C: usize> Div<T> for Matrix<T, R, C> {
     }
 }
 
+// Square matrix operations
+impl<T: Numeric, const S: usize> Matrix<T, S, S> {
+    pub fn identity() -> Self {
+        let mut result = Self::zeros();
+        for i in 0..S {
+            result.data[i][i] = T::from(1);
+        }
+        result
+    }
+}
+
+// Column vector operations
+impl<T: Numeric, const R: usize> Matrix<T, R, 1> {
+    pub fn dot(&self, rhs: &Matrix<T, R, 1>) -> T {
+        let mut result = T::from(0);
+        for i in 0..R {
+            result += self.data[i][0] * rhs.data[i][0];
+        }
+        result
+    }
+}
+
+impl<T: Numeric> Vector<T, 3> {
+    pub fn xyz(x: T, y: T, z: T) -> Self {
+        Self::new([[x], [y], [z]])
+    }
+    pub fn cross(&self, rhs: &Self) -> Self {
+        Self::xyz(
+            self.y() * rhs.z() - self.z() * rhs.y(),
+            self.z() * rhs.x() - self.x() * rhs.z(),
+            self.x() * rhs.y() - self.y() * rhs.x(),
+        )
+    }
+    pub fn x(&self) -> T {
+        self.data[0][0]
+    }
+    pub fn y(&self) -> T {
+        self.data[1][0]
+    }
+    pub fn z(&self) -> T {
+        self.data[2][0]
+    }
+    pub fn homogeneous(&self) -> Vector<T, 4> {
+        let mut result = Vector::zeros();
+        for i in 0..3 {
+            result.data[i][0] = self.data[i][0];
+        }
+        result.data[3][0] = T::from(1);
+        result
+    }
+}
+
+impl<T: Numeric> Vector<T, 2> {
+    pub fn xy(x: T, y: T) -> Self {
+        Self::new([[x], [y]])
+    }
+    pub fn x(&self) -> T {
+        self.data[0][0]
+    }
+    pub fn y(&self) -> T {
+        self.data[1][0]
+    }
+}
+
+// f32 specific operations
+
+impl Vector4f {
+    pub fn hnormalized(&self) -> Vector3f {
+        let mut result = Matrix::zeros();
+        for i in 0..3 {
+            result.data[i][0] = self.data[i][0] / self.data[3][0]
+        }
+        result
+    }
+}
+
+fn fast_inverse_sqrt(x: f32) -> f32 {
+    let xhalf = 0.5 * x;
+    let i = x.to_bits();
+    let i = 0x5f3759df - (i >> 1);
+    let y = f32::from_bits(i);
+    y * (1.5 - xhalf * y * y)
+}
+
+impl<const R: usize> Matrix<f32, R, 1> {
+    pub fn length(&self) -> f32 {
+        self.dot(self).sqrt()
+    }
+    pub fn distance(&self, rhs: &Self) -> f32 {
+        (*self - *rhs).length()
+    }
+    pub fn squared_distance(&self, rhs: &Self) -> f32 {
+        (*self - *rhs).squared_length()
+    }
+    pub fn squared_length(&self) -> f32 {
+        self.dot(self)
+    }
+    pub fn normalized(&self) -> Self {
+        *self / self.length()
+    }
+    pub fn fast_normalized(&self) -> Self {
+        *self * fast_inverse_sqrt(self.squared_length())
+    }
+    pub fn cos_angle(&self, rhs: &Self) -> f32 {
+        self.dot(rhs) / (self.length() * rhs.length())
+    }
+    pub fn clamp(&self, min: f32, max: f32) -> Self {
+        let mut result = Matrix::zeros();
+        for i in 0..R {
+            result.data[i][0] = self.data[i][0].max(min).min(max);
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -327,7 +339,7 @@ mod test {
     fn test_multiply_two_identity_matrices() {
         let a = Matrix4f::identity();
         let b = Matrix4f::identity();
-        assert_eq!(&a * &b, Matrix4f::identity());
+        assert_eq!(a.mat_mul(&b), Matrix4f::identity());
     }
 
     #[test]
@@ -367,7 +379,7 @@ mod test {
             [986.0, 1028.0, 1070.0, 1112.0],
             [1354.0, 1412.0, 1470.0, 1528.0],
         ]);
-        assert_eq!(&a * &b, expected);
+        assert_eq!(a.mat_mul(&b), expected);
     }
 
     #[test]
@@ -405,7 +417,7 @@ mod test {
         let v = Vector3f::xyz(1.0, 2.0, 3.0);
         let w = 102.0;
         let expected = Vector3f::xyz(18.0 / w, 46.0 / w, 74.0 / w);
-        let result = (&m * &v.homogeneous()).hnormalized();
+        let result = m.mat_mul(&v.homogeneous()).hnormalized();
         let tol = 1e-6;
         assert_approx!(result.x(), expected.x(), tol);
         assert_approx!(result.y(), expected.y(), tol);

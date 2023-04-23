@@ -77,7 +77,7 @@ impl Renderer {
             .filter_map(|object| object.intersect(ray, MIN_DISTANCE))
             .min_by(compare)
         {
-            let target = hit.intersection_point + hit.normal + rng.unit_sphere();
+            let target = hit.intersection_point + hit.normal + rng.unit_vector();
             let ray = Ray {
                 origin: hit.intersection_point,
                 direction: (target - hit.intersection_point).normalized(),

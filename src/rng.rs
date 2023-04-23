@@ -20,6 +20,10 @@ impl Rng {
         p
     }
 
+    pub fn unit_vector(&mut self) -> Vector3f {
+        self.unit_sphere().normalized()
+    }
+
     pub fn uniform(&mut self) -> f32 {
         let mut x = self.seed + 42;
         x ^= x << 13;

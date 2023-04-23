@@ -52,6 +52,18 @@ impl Ray {
     }
 }
 
+pub enum Material {
+    Lambertian { albedo: Vector3f },
+}
+pub struct HitData {
+    pub intersection_point: Vector3f,
+    pub normal: Vector3f,
+}
+
+pub trait Hittable: Sync {
+    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
+}
+
 pub struct Sphere {
     pub center: Vector3f,
     pub radius: f32,
@@ -85,15 +97,6 @@ impl Hittable for Sphere {
             normal,
         })
     }
-}
-
-pub struct HitData {
-    pub intersection_point: Vector3f,
-    pub normal: Vector3f,
-}
-
-pub trait Hittable: Sync {
-    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
 }
 
 #[cfg(test)]
