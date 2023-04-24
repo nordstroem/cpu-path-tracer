@@ -1,5 +1,6 @@
-use geometry::{Camera, HitData, Hittable, Material, Ray};
+use geometry::{Camera, Hittable, Material, Ray};
 use image::{gamma_correct, Color, Image};
+use matrix::Vector3f;
 use rng::Rng;
 
 pub struct Renderer {
@@ -24,7 +25,7 @@ impl Renderer {
         image
     }
 
-    pub fn average_render(&self, seeds: &Vec<u32>) -> Image {
+    pub fn average_render(&self, seeds: &[u32]) -> Image {
         let image_size = self.camera.sensor_size_px;
         let weight = 1.0 / seeds.len() as f32;
 
@@ -59,30 +60,33 @@ impl Renderer {
     }
 
     fn compute_color_for_ray(&self, ray: &Ray, rng: &mut Rng, max_depth: u32) -> Color {
-        let compare = |a: &HitData, b: &HitData| {
-            (ray.origin.squared_distance(&a.intersection_point))
-                .partial_cmp(&ray.origin.squared_distance(&b.intersection_point))
-                .unwrap()
-        };
-
         if max_depth == 0 {
             return Color::rgb(0.0, 0.0, 0.0);
         }
 
+        let compare = |a: &Vector3f, b: &Vector3f| {
+            (ray.origin.squared_distance(&a))
+                .partial_cmp(&ray.origin.squared_distance(&b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        };
         const MIN_DISTANCE: f32 = 1e-3;
-
-        if let Some(hit) = self
+        if let Some((intersection_point, object)) = self
             .objects
             .iter()
-            .filter_map(|object| object.intersect(ray, MIN_DISTANCE))
-            .min_by(compare)
+            .filter_map(|object| {
+                object
+                    .intersection(ray, MIN_DISTANCE)
+                    .and_then(|hit| Some((hit, object)))
+            })
+            .min_by(|(a, _), (b, _)| compare(a, b))
         {
-            let target = hit.intersection_point + hit.normal + rng.unit_vector();
+            let normal = object.normal(&ray, intersection_point);
+            let target = intersection_point + normal + rng.unit_vector();
             let ray = Ray {
-                origin: hit.intersection_point,
-                direction: (target - hit.intersection_point).normalized(),
+                origin: intersection_point,
+                direction: (target - intersection_point).normalized(),
             };
-            let color = match hit.material {
+            let color = match object.material() {
                 Material::Lambertian { albedo } => albedo,
             };
             return self.compute_color_for_ray(&ray, rng, max_depth - 1) * color;

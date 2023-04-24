@@ -273,14 +273,6 @@ impl Vector4f {
     }
 }
 
-fn fast_inverse_sqrt(x: f32) -> f32 {
-    let xhalf = 0.5 * x;
-    let i = x.to_bits();
-    let i = 0x5f3759df - (i >> 1);
-    let y = f32::from_bits(i);
-    y * (1.5 - xhalf * y * y)
-}
-
 impl<const R: usize> Matrix<f32, R, 1> {
     pub fn length(&self) -> f32 {
         self.dot(self).sqrt()
@@ -296,9 +288,6 @@ impl<const R: usize> Matrix<f32, R, 1> {
     }
     pub fn normalized(&self) -> Self {
         *self / self.length()
-    }
-    pub fn fast_normalized(&self) -> Self {
-        *self * fast_inverse_sqrt(self.squared_length())
     }
     pub fn cos_angle(&self, rhs: &Self) -> f32 {
         self.dot(rhs) / (self.length() * rhs.length())

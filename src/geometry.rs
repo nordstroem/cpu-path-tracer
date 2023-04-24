@@ -56,14 +56,11 @@ impl Ray {
 pub enum Material {
     Lambertian { albedo: Vector3f },
 }
-pub struct HitData {
-    pub intersection_point: Vector3f,
-    pub normal: Vector3f,
-    pub material: Material,
-}
 
 pub trait Hittable: Sync {
-    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData>;
+    fn intersection(&self, ray: &Ray, min_distance: f32) -> Option<Vector3f>;
+    fn material(&self) -> Material;
+    fn normal(&self, ray: &Ray, intersection_point: Vector3f) -> Vector3f;
 }
 
 pub struct Sphere {
@@ -73,7 +70,7 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
-    fn intersect(&self, ray: &Ray, min_distance: f32) -> Option<HitData> {
+    fn intersection(&self, ray: &Ray, min_distance: f32) -> Option<Vector3f> {
         let oc = ray.origin - self.center;
         let half_p = ray.direction.dot(&oc);
         let q = oc.dot(&oc) - self.radius * self.radius;
@@ -90,16 +87,17 @@ impl Hittable for Sphere {
             (false, true) => ray.at(t2),
             (false, false) => return None,
         };
-
+        Some(intersection_point)
+    }
+    fn material(&self) -> Material {
+        self.material
+    }
+    fn normal(&self, ray: &Ray, intersection_point: Vector3f) -> Vector3f {
         let mut normal = (intersection_point - self.center) / self.radius;
-        if normal.dot(&ray.direction) > 0.0 {
-            normal = normal * -1.0;
+        if ray.direction.dot(&normal) > 0.0 {
+            normal = normal * 1.0;
         }
-        Some(HitData {
-            intersection_point,
-            normal,
-            material: self.material,
-        })
+        normal
     }
 }
 
