@@ -1,4 +1,5 @@
 use matrix::{Vector2f, Vector2i, Vector3f};
+use rng::Rng;
 
 pub struct Camera {
     forward: Vector3f,
@@ -57,48 +58,69 @@ pub enum Material {
     Lambertian { albedo: Vector3f },
 }
 
-pub trait Hittable: Sync {
-    fn intersection(&self, ray: &Ray, min_distance: f32) -> Option<Vector3f>;
-    fn material(&self) -> Material;
-    fn normal(&self, ray: &Ray, intersection_point: Vector3f) -> Vector3f;
+pub enum Surface {
+    Sphere { center: Vector3f, radius: f32 },
 }
 
-pub struct Sphere {
-    pub center: Vector3f,
-    pub radius: f32,
+pub struct Object {
+    pub surface: Surface,
     pub material: Material,
 }
 
-impl Hittable for Sphere {
-    fn intersection(&self, ray: &Ray, min_distance: f32) -> Option<Vector3f> {
-        let oc = ray.origin - self.center;
-        let half_p = ray.direction.dot(&oc);
-        let q = oc.dot(&oc) - self.radius * self.radius;
-        let discriminant = half_p * half_p - q;
-
-        if discriminant < 0.0 {
-            return None;
+pub fn get_intersection(surface: &Surface, ray: &Ray) -> Option<Vector3f> {
+    const MIN_DISTANCE: f32 = 1e-3;
+    match surface {
+        Surface::Sphere { center, radius } => {
+            get_sphere_intersection(ray, center, *radius, MIN_DISTANCE)
         }
-        let t1 = -half_p - discriminant.sqrt();
-        let t2 = -half_p + discriminant.sqrt();
+    }
+}
 
-        let intersection_point = match (t1 > min_distance, t2 > min_distance) {
-            (true, _) => ray.at(t1),
-            (false, true) => ray.at(t2),
-            (false, false) => return None,
-        };
-        Some(intersection_point)
+pub fn get_normal(surface: &Surface, point: &Vector3f, anti_reference: &Vector3f) -> Vector3f {
+    let mut normal = match surface {
+        Surface::Sphere { center, .. } => (*point - *center).normalized(),
+    };
+    if normal.dot(anti_reference) > 0.0 {
+        normal = normal * -1.0;
     }
-    fn material(&self) -> Material {
-        self.material
+    normal
+}
+
+pub fn get_scatter_direction(normal: &Vector3f, material: &Material, rng: &mut Rng) -> Vector3f {
+    match material {
+        Material::Lambertian { .. } => (*normal + rng.unit_vector()).normalized(),
     }
-    fn normal(&self, ray: &Ray, intersection_point: Vector3f) -> Vector3f {
-        let mut normal = (intersection_point - self.center) / self.radius;
-        if ray.direction.dot(&normal) > 0.0 {
-            normal = normal * 1.0;
-        }
-        normal
+}
+
+pub fn get_attenuation(material: &Material) -> Vector3f {
+    match material {
+        Material::Lambertian { albedo } => *albedo,
     }
+}
+
+fn get_sphere_intersection(
+    ray: &Ray,
+    center: &Vector3f,
+    radius: f32,
+    min_distance: f32,
+) -> Option<Vector3f> {
+    let oc = ray.origin - *center;
+    let half_p = ray.direction.dot(&oc);
+    let q = oc.dot(&oc) - radius * radius;
+    let discriminant = half_p * half_p - q;
+
+    if discriminant < 0.0 {
+        return None;
+    }
+    let t1 = -half_p - discriminant.sqrt();
+    let t2 = -half_p + discriminant.sqrt();
+
+    let intersection_point = match (t1 > min_distance, t2 > min_distance) {
+        (true, _) => ray.at(t1),
+        (false, true) => ray.at(t2),
+        (false, false) => return None,
+    };
+    Some(intersection_point)
 }
 
 #[cfg(test)]

@@ -1,11 +1,14 @@
-use geometry::{Camera, Hittable, Material, Ray};
+use geometry::{
+    get_attenuation, get_intersection, get_normal, get_scatter_direction, Camera, Material, Object,
+    Ray,
+};
 use image::{gamma_correct, Color, Image};
 use matrix::Vector3f;
 use rng::Rng;
 
 pub struct Renderer {
     pub camera: Camera,
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Object>,
     pub ambient_light_color: Color,
     pub max_depth: u32,
     pub samples_per_pixel: u32,
@@ -69,27 +72,22 @@ impl Renderer {
                 .partial_cmp(&ray.origin.squared_distance(&b))
                 .unwrap_or(std::cmp::Ordering::Equal)
         };
-        const MIN_DISTANCE: f32 = 1e-3;
         if let Some((intersection_point, object)) = self
             .objects
             .iter()
             .filter_map(|object| {
-                object
-                    .intersection(ray, MIN_DISTANCE)
-                    .and_then(|hit| Some((hit, object)))
+                get_intersection(&object.surface, ray).and_then(|hit| Some((hit, object)))
             })
             .min_by(|(a, _), (b, _)| compare(a, b))
         {
-            let normal = object.normal(&ray, intersection_point);
-            let target = intersection_point + normal + rng.unit_vector();
+            let normal = get_normal(&object.surface, &intersection_point, &ray.direction);
+            let scatter_direction = get_scatter_direction(&normal, &object.material, rng);
+            let attenuation = get_attenuation(&object.material);
             let ray = Ray {
                 origin: intersection_point,
-                direction: (target - intersection_point).normalized(),
+                direction: scatter_direction,
             };
-            let color = match object.material() {
-                Material::Lambertian { albedo } => albedo,
-            };
-            return self.compute_color_for_ray(&ray, rng, max_depth - 1) * color;
+            return self.compute_color_for_ray(&ray, rng, max_depth - 1) * attenuation;
         } else {
             self.ambient_light_color
         }
